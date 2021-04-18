@@ -1,0 +1,62 @@
+{
+  "name": "@wymp/sql",
+  "version": "1.0.0-beta1",
+  "description": "A small typescript package providing generalized and customizable sql database access",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest",
+    "prepublishOnly": "rm -Rf dist; npx tsc",
+    "postinstall": "husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wymp/ts-sql.git"
+  },
+  "keywords": [
+    "sql",
+    "database",
+    "dbal"
+  ],
+  "author": "Kael Shipman <kael.shipman@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wymp/ts-sql/issues"
+  },
+  "homepage": "https://github.com/wymp/ts-sql#readme",
+  "dependencies": {
+    "@openfinanceio/http-errors": "^1.7.0",
+    "@wymp/ts-simple-interfaces": "^0.5.1",
+    "@wymp/types": "^0.1.0-rc",
+    "uuid-with-v6": "^1.1.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.22",
+    "@wymp/ts-simple-interfaces-testing": "^0.5.0",
+    "husky": "^6.0.0",
+    "jest": "^26.6.3",
+    "prettier": "^2.2.1",
+    "pretty-quick": "^3.1.0",
+    "ts-jest": "^26.5.4",
+    "typescript": "^4.2.4"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "trailingComma": "es5"
+  },
+  "jest": {
+    "verbose": true,
+    "testEnvironment": "node",
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "globals": {
+      "ts-jest": {
+        "tsconfig": "tsconfig.test.json"
+      }
+    }
+  }
+}
