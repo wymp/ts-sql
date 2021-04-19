@@ -1,2 +1,3 @@
 tsconfig*
 *.sw[op]
+.husky
