@@ -27,6 +27,25 @@ class TestIo extends AbstractSql<Test.TypeMap> {
     };
   }
 
+  public testHexToBuffers<
+    T extends { [k: string]: unknown },
+    Converted extends keyof T | undefined
+  >(
+    _obj: T
+  ): Converted extends undefined ? T : { [K in keyof T]: K extends Converted ? Buffer : T[K] } {
+    return this.hexToBuffers<T, Converted>(_obj);
+  }
+
+  public testBuffersToHex<T, Except extends keyof T | undefined>(
+    _obj: T,
+    params?: {
+      notUuid?: true | Array<keyof T>;
+      not?: Array<Except>;
+    }
+  ): { [K in keyof T]: T[K] extends Buffer ? (K extends Except ? Buffer : string) : T[K] } {
+    return this.buffersToHex<T, Except>(_obj, params);
+  }
+
   protected getSqlForFilterField<T extends keyof Test.TypeMap>(
     t: T,
     field: string,
@@ -64,7 +83,7 @@ class TestIo extends AbstractSql<Test.TypeMap> {
   }
 }
 
-describe("BaseSql Class", () => {
+describe("AbstractSql Class", () => {
   let io: TestIo;
   let log: MockSimpleLogger;
 
@@ -240,6 +259,92 @@ describe("BaseSql Class", () => {
       // Uncomment to test typings
 
       //await io.get("users", { _t: "filter", id: "abcde", email: "12345" }, undefined, log);
+    });
+
+    test("can get users with buffer constraint", async () => {
+      await io.get("users", { id: io.hexToBuffer("aaaaaaaa-bbbb-cccc-dddd-eeeeffff0000") }, log);
+
+      const q = io.mockDb.queries;
+      expect(q).toHaveLength(1);
+      expect(q[0]).toMatchObject({
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE `id` = ?",
+      });
+      expect(Buffer.isBuffer(q[0].params![0])).toBe(true);
+    });
+  });
+
+  describe("hexToBuffers", () => {
+    const obj = {
+      id: "aaaaaaaa-bbbb-cccc-dddd-eeeeffff0000",
+      hex: "aaaaaaaabbbbccccddddeeeeffff0000111122223333444455556666777788889999",
+      a: "a",
+      b: "b",
+      one: 1,
+      two: 2,
+      t: true,
+      f: false,
+    };
+
+    test("converts id fields to buffers", () => {
+      const newObj = io.testHexToBuffers<typeof obj, "id" | "hex">(obj);
+      expect(Buffer.isBuffer(newObj.id)).toBe(true);
+      expect(Buffer.isBuffer(newObj.hex)).toBe(true);
+      expect(Buffer.isBuffer(obj.id)).toBe(false);
+      expect(Buffer.isBuffer(obj.hex)).toBe(false);
+      expect(newObj.id.toString("hex")).toBe(obj.id.replace(/-/g, ""));
+      expect(newObj.hex.toString("hex")).toBe(obj.hex);
+    });
+  });
+
+  describe("buffersToHex", () => {
+    const obj = {
+      id: Buffer.from("aaaaaaaabbbbccccddddeeeeffff0000", "hex"),
+      hex: Buffer.from(
+        "aaaaaaaabbbbccccddddeeeeffff0000111122223333444455556666777788889999",
+        "hex"
+      ),
+      a: "a",
+      b: "b",
+      one: 1,
+      two: 2,
+      t: true,
+      f: false,
+    };
+
+    test("converts buffer fields to hex", () => {
+      const newObj = io.testBuffersToHex(obj);
+      expect(typeof newObj.id).toBe("string");
+      expect(typeof newObj.hex).toBe("string");
+      expect(Buffer.isBuffer(obj.id)).toBe(true);
+      expect(Buffer.isBuffer(obj.hex)).toBe(true);
+      expect(newObj.id).toBe("aaaaaaaa-bbbb-cccc-dddd-eeeeffff0000");
+      expect(newObj.hex).toBe(
+        "aaaaaaaabbbbccccddddeeeeffff0000111122223333444455556666777788889999"
+      );
+    });
+
+    test("does not convert excepted fields", () => {
+      const newObj = io.testBuffersToHex(obj, { not: ["hex", "id"] });
+      expect(Buffer.isBuffer(newObj.id)).toBe(true);
+      expect(Buffer.isBuffer(newObj.hex)).toBe(true);
+      expect(newObj.id.toString("hex")).toBe("aaaaaaaabbbbccccddddeeeeffff0000");
+      expect(newObj.hex.toString("hex")).toBe(
+        "aaaaaaaabbbbccccddddeeeeffff0000111122223333444455556666777788889999"
+      );
+    });
+
+    test("does not convert indicated fields to uuid", () => {
+      const newObj = io.testBuffersToHex(obj, { notUuid: ["id"] });
+      expect(typeof newObj.id).toBe("string");
+      expect(typeof newObj.hex).toBe("string");
+      expect(newObj.id).toBe("aaaaaaaabbbbccccddddeeeeffff0000");
+    });
+
+    test("does not convert any fields to uuid when requested", () => {
+      const newObj = io.testBuffersToHex(obj, { notUuid: true });
+      expect(typeof newObj.id).toBe("string");
+      expect(typeof newObj.hex).toBe("string");
+      expect(newObj.id).toBe("aaaaaaaabbbbccccddddeeeeffff0000");
     });
   });
 });

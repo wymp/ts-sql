@@ -66,7 +66,7 @@ export type GenericTypeMap = {
   };
 };
 
-export type IdConstraint = { id: string | undefined | null };
+export type IdConstraint = { id: string | number | Buffer | undefined | null };
 export type NullFilter = { _t: "filter" };
 export type NoDefaults = { [k in keyof {}]?: SqlPrimitive | (() => SqlPrimitive) };
 
@@ -130,6 +130,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   implements SqlInterface<ResourceTypeMap> {
   protected db: SimpleSqlDbInterface;
   protected cache: CacheInterface;
+  protected convertBuffersAndHex: boolean = true;
 
   /**
    * Define a map for types to table names. Any types that are not found in this map are assumed
@@ -244,7 +245,11 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       log.debug(`Final query: ${queryStr}; Params: ${JSON.stringify(params)}`);
       const { rows } = await this.db.query<ResourceTypeMap[T]["type"]>(queryStr, params);
       log.debug(`Returning ${rows.length} ${t}`);
-      return rows;
+      if (this.convertBuffersAndHex) {
+        return rows.map((r) => this.buffersToHex(r));
+      } else {
+        return rows;
+      }
     } else {
       const constraint = this.processConstraint(t, _constraint);
 
@@ -292,7 +297,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
             );
           }
 
-          return rows[0];
+          return this.convertBuffersAndHex ? this.buffersToHex(rows[0]) : rows[0];
         },
         undefined,
         log
@@ -725,6 +730,69 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       };
     }
   }
+
+  /**
+   * This function finds all buffers and converts them to hex. If the "uuids" param is true or
+   * undefined and the buffer is 16 bytes, the resulting string is formatted as a uuid.
+   *
+   * NOTE: Typescript makes it almost impossible to do things like this, so we're going to disable it
+   * for this function
+   */
+  protected buffersToHex<T, Except extends keyof T | undefined>(
+    _obj: T,
+    params?: {
+      notUuid?: true | Array<keyof T>;
+      not?: Array<Except>;
+    }
+  ): { [K in keyof T]: T[K] extends Buffer ? (K extends Except ? Buffer : string) : T[K] } {
+    const obj: any = { ..._obj };
+    for (const k in obj) {
+      const v = obj[k];
+      if (Buffer.isBuffer(v) && !params?.not?.includes(k as any)) {
+        if (
+          v.length === 16 &&
+          params?.notUuid !== true &&
+          (!Array.isArray(params?.notUuid) || !params?.notUuid?.includes(k as any))
+        ) {
+          obj[k] = this.bufferToUuid(v);
+        } else {
+          obj[k] = v.toString("hex");
+        }
+      }
+    }
+    return obj;
+  }
+
+  /**
+   * Unfortunately, there's no way to easily figure out _which_ keys will be converted, since we're
+   * doing some actual string analysis here. Need to come back to this.
+   * TODO: Create better typing parameters for hexToBuffers
+   *
+   * NOTE: Typescript makes it almost impossible to do things like this, so we're going to disable it
+   * for this function
+   */
+  protected hexToBuffers<T extends { [k: string]: unknown }, Converted extends keyof T | undefined>(
+    _obj: T
+  ): Converted extends undefined ? T : { [K in keyof T]: K extends Converted ? Buffer : T[K] } {
+    const obj: any = { ..._obj };
+    for (const k in obj) {
+      if (typeof obj[k] === "string" && !obj[k].replace(/-/g, "").match(/[^a-fA-F0-9]/)) {
+        obj[k] = this.hexToBuffer(obj[k]);
+      }
+    }
+    return obj;
+  }
+
+  public bufferToUuid(buf: Buffer): string {
+    return `${bite(buf, 0, 4)}-${bite(buf, 4, 6)}-${bite(buf, 6, 8)}-${bite(buf, 8, 10)}-${bite(
+      buf,
+      10
+    )}`;
+  }
+
+  public hexToBuffer(hex: string): Buffer {
+    return Buffer.from(hex.replace(/-/g, ""), "hex");
+  }
 }
 
 const isLog = (thing: any): thing is SimpleLoggerInterface => {
@@ -739,3 +807,5 @@ const sortDir: { [k: string]: "ASC" | "DESC" } = {
   "+": "ASC",
   "-": "DESC",
 };
+
+const bite = (buf: Buffer, i: number, j?: number): string => buf.slice(i, j).toString("hex");
