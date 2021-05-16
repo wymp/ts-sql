@@ -30,7 +30,7 @@
   "dependencies": {
     "@openfinanceio/http-errors": "^1.7.0",
     "@wymp/ts-simple-interfaces": "^0.5.1",
-    "@wymp/types": "^0.1.0-rc2",
+    "@wymp/types": "^0.1.0-rc3",
     "uuid-with-v6": "^1.1.2"
   },
   "devDependencies": {
