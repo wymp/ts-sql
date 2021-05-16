@@ -59,11 +59,11 @@ export namespace Test {
   export type TypeMap = {
     users: {
       type: User;
-      constraint:
+      constraints:
         | IdConstraint
         | { email: string | undefined | null }
         | { primaryAddressId: string | undefined | null };
-      filter: Filter<{
+      filters: Filter<{
         pet?: {
           type?: Pet["type"];
           nameLike?: string;
@@ -75,8 +75,8 @@ export namespace Test {
 
     addresses: {
       type: Address;
-      constraint: IdConstraint;
-      filter: Filter<{
+      constraints: IdConstraint;
+      filters: Filter<{
         country?: string | Array<string>;
         zip?: string | Array<string>;
       }>;
@@ -85,15 +85,15 @@ export namespace Test {
 
     organizations: {
       type: Organization;
-      constraint: IdConstraint;
-      filter: NullFilter;
+      constraints: IdConstraint;
+      filters: NullFilter;
       defaults: NoDefaults;
     };
 
     "org-roles": {
       type: OrgRole;
-      constraint: { organizationId: string; userId: string; role: OrgRole["role"] };
-      filter: Filter<{
+      constraints: { organizationId: string; userId: string; role: OrgRole["role"] };
+      filters: Filter<{
         organizationId?: string;
         userId?: string;
       }>;
@@ -102,8 +102,8 @@ export namespace Test {
 
     pets: {
       type: Pet;
-      constraint: IdConstraint;
-      filter: Filter<{
+      constraints: IdConstraint;
+      filters: Filter<{
         ownerId?: string;
         type?: Pet["type"];
         nameLike?: string;

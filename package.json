@@ -1,6 +1,6 @@
 {
   "name": "@wymp/sql",
-  "version": "1.0.0-beta1",
+  "version": "1.0.0-beta2",
   "description": "A small typescript package providing generalized and customizable sql database access",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -30,7 +30,7 @@
   "dependencies": {
     "@openfinanceio/http-errors": "^1.7.0",
     "@wymp/ts-simple-interfaces": "^0.5.1",
-    "@wymp/types": "^0.1.0-rc",
+    "@wymp/types": "^0.1.0-rc2",
     "uuid-with-v6": "^1.1.2"
   },
   "devDependencies": {

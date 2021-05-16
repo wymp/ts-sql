@@ -1,6 +1,6 @@
 import * as E from "@openfinanceio/http-errors";
 import { MockSimpleLogger } from "@wymp/ts-simple-interfaces-testing";
-import { AbstractSql } from "../src";
+import { AbstractSql, Query } from "../src";
 import { MockSql } from "./MockSql";
 import { Test } from "./Types";
 
@@ -31,12 +31,12 @@ class TestIo extends AbstractSql<Test.TypeMap> {
     t: T,
     field: string,
     val: any
-  ): { clauses: Array<string>; params: Array<any> } | undefined {
+  ): Partial<Query> {
     // User filters
     if (t === "users") {
       // Pet filters
       if (field === "pet") {
-        const clauses: Array<string> = ["`ownerId` = `users`.`id`"];
+        const clauses: Array<string> = ["`ownerId` = `us`.`id`"];
         const params: Array<any> = [];
         if (val.type !== undefined) {
           clauses.push("`type` = ?");
@@ -47,14 +47,14 @@ class TestIo extends AbstractSql<Test.TypeMap> {
           params.push(val.nameLike);
         }
         return {
-          clauses: ["EXISTS (SELECT * FROM `pets` WHERE " + clauses.join(" && ") + ")"],
+          where: ["EXISTS (SELECT * FROM `pets` AS `pe` WHERE " + clauses.join(" && ") + ")"],
           params,
         };
       }
 
       if (field === "emailLike") {
         return {
-          clauses: ["`email` LIKE ?"],
+          where: ["`email` LIKE ?"],
           params: [val],
         };
       }
@@ -87,15 +87,15 @@ describe("BaseSql Class", () => {
       const q = io.mockDb.queries;
       expect(q).toHaveLength(4);
       expect(q[0]).toMatchObject({
-        query: "SELECT * FROM `users` WHERE `id` = ?",
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE `id` = ?",
         params: ["abcde"],
       });
       expect(q[1]).toMatchObject({
-        query: "SELECT * FROM `users` WHERE `email` = ?",
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE `email` = ?",
         params: ["12345"],
       });
       expect(q[2]).toMatchObject({
-        query: "SELECT * FROM `users` WHERE `primaryAddressId` = ?",
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE `primaryAddressId` = ?",
         params: ["00000"],
       });
 
@@ -111,32 +111,135 @@ describe("BaseSql Class", () => {
 
     test("can get user with filter", async () => {
       await Promise.all([
-        io.get("users", { _t: "filter", pet: { type: "dog" } }, log),
-        io.get("users", { _t: "filter", pet: { type: "dog", nameLike: "bowser%" } }, log),
-        io.get("users", { _t: "filter", emailLike: "%jimmy%" }, log),
+        // Simple
+        io.get("users", { _t: "filter", pet: { type: "dog" } }, undefined, log),
+        io.get(
+          "users",
+          { _t: "filter", pet: { type: "dog", nameLike: "bowser%" } },
+          undefined,
+          log
+        ),
+        io.get("users", { _t: "filter", emailLike: "%jimmy%" }, undefined, log),
         io.get("users", { _t: "filter" }, log),
+        io.get("users", log),
+
+        // With collection params
+        io.get(
+          "users",
+          { _t: "filter", pet: { type: "dog", nameLike: "bowser%" } },
+          {
+            __pg: { size: 100, cursor: Buffer.from("num:3").toString("base64") },
+          },
+          log
+        ),
+        io.get(
+          "users",
+          { _t: "filter", pet: { type: "dog", nameLike: "bowser%" } },
+          {
+            __pg: { size: 100 },
+            __sort: "name",
+          },
+          log
+        ),
+        io.get(
+          "users",
+          { _t: "filter", pet: { type: "dog" } },
+          {
+            __pg: { cursor: Buffer.from("num:3").toString("base64") },
+            __sort: "name",
+          },
+          log
+        ),
+        io.get(
+          "users",
+          { _t: "filter", pet: { type: "dog" } },
+          {
+            __sort: "-name",
+          },
+          log
+        ),
+        io.get(
+          "users",
+          { _t: "filter", pet: { type: "dog" } },
+          {
+            __sort: "-name,+type",
+          },
+          log
+        ),
+        io.get(
+          "users",
+          { _t: "filter", pet: { type: "dog" } },
+          {
+            __sort: "-name,type",
+          },
+          log
+        ),
+        io.get("users", { __sort: "-name,type" }, log),
       ]);
 
       const q = io.mockDb.queries;
-      expect(q).toHaveLength(4);
+      expect(q).toHaveLength(12);
       expect(q[0]).toMatchObject({
         query:
-          "SELECT * FROM `users` WHERE EXISTS (SELECT * FROM `pets` WHERE `ownerId` = `users`.`id` && `type` = ?) LIMIT 0, 25",
+          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?) LIMIT 0, 25",
         params: ["dog"],
       });
       expect(q[1]).toMatchObject({
         query:
-          "SELECT * FROM `users` WHERE EXISTS (SELECT * FROM `pets` WHERE `ownerId` = `users`.`id` && `type` = ? && `pets`.`name` LIKE ?) LIMIT 0, 25",
+          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ? && `pets`.`name` LIKE ?) LIMIT 0, 25",
         params: ["dog", "bowser%"],
       });
       expect(q[2]).toMatchObject({
-        query: "SELECT * FROM `users` WHERE `email` LIKE ? LIMIT 0, 25",
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE `email` LIKE ? LIMIT 0, 25",
         params: ["%jimmy%"],
+      });
+      expect(q[3]).toMatchObject({
+        query: "SELECT `us`.* FROM `users` AS `us` LIMIT 0, 25",
+        params: undefined,
+      });
+      expect(q[4]).toMatchObject({
+        query: "SELECT `us`.* FROM `users` AS `us` LIMIT 0, 25",
+        params: undefined,
+      });
+
+      expect(q[5]).toMatchObject({
+        query:
+          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ? && `pets`.`name` LIKE ?) LIMIT 200, 100",
+        params: ["dog", "bowser%"],
+      });
+      expect(q[6]).toMatchObject({
+        query:
+          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ? && `pets`.`name` LIKE ?) ORDER BY `name` ASC LIMIT 0, 100",
+        params: ["dog", "bowser%"],
+      });
+      expect(q[7]).toMatchObject({
+        query:
+          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?) ORDER BY `name` ASC LIMIT 50, 25",
+        params: ["dog"],
+      });
+      expect(q[8]).toMatchObject({
+        query:
+          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?) ORDER BY `name` DESC LIMIT 0, 25",
+        params: ["dog"],
+      });
+      expect(q[9]).toMatchObject({
+        query:
+          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?) ORDER BY `name` DESC, `type` ASC LIMIT 0, 25",
+        params: ["dog"],
+      });
+      expect(q[10]).toMatchObject({
+        query:
+          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?) ORDER BY `name` DESC, `type` ASC LIMIT 0, 25",
+        params: ["dog"],
+      });
+      expect(q[11]).toMatchObject({
+        query: "SELECT `us`.* FROM `users` AS `us` ORDER BY `name` DESC, `type` ASC LIMIT 0, 25",
+        params: undefined,
       });
 
       // Uncomment to test typings
 
-      //await io.get("users", { _t: "filter", id: "abcde", email: "12345" }, log);
+      //await io.get("users", { _t: "filter", id: "abcde", email: "12345" }, undefined, log);
     });
   });
 });

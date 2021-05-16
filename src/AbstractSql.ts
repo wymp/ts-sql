@@ -6,7 +6,7 @@ import {
   SimpleLoggerInterface,
 } from "@wymp/ts-simple-interfaces";
 import * as E from "@openfinanceio/http-errors";
-//import { Audit, Auth, PartialSelect } from "@wymp/types";
+import { Api } from "@wymp/types";
 
 export interface CacheInterface {
   get<T>(k: string, cb: () => Promise<T>, ttl?: number, log?: SimpleLoggerInterface): Promise<T>;
@@ -19,18 +19,49 @@ export interface CacheInterface {
  * identifier (`t`), together with the database type for that object. The string type identifier
  * should match the `type` parameter of the API type for the same object.
  *
+ * In this structure, a "constraint" represents a unique or primary key. A constraint should
+ * _always_ resolve to a single resource. For example, `{ id: 1 }` or `{ email: "me@email.com" }` or
+ * `{ type: "users", id: "abcde" }`. A "filter" is a set of arbitrary key/value pairs that can be
+ * interpreted into a SQL query that returns 0 or more results.
+ *
  * In your domain, this would look something like the following:
  *
- * export type TypeMap =
- *   | { t: "users"; v: MyDomain.Db.User; }
- *   | { t: "events"; v: MyDomain.Db.Event; }
+ * export type TypeMap = {
+ *   users: {
+ *     type: MyDomain.Db.User;
+ *     constraints:
+ *       | { id: string }
+ *       | { email: string };
+ *     filters: {
+ *       _t: "filter";
+ *       emailLike?: string;
+ *       nameLike?: string;
+ *       dob?: ["lt"|"gt"|"eq", number]
+ *     };
+ *     defaults: typeof UserDefaults;
+ *   };
+ *   events: {
+ *     type: MyDomain.Db.Event;
+ *     constraints: { id: string };
+ *     filters: NullFilter;
+ *     defaults: typeof EventDefaults;
+ *   }
  *   ....
+ *
+ * export const UserDefaults = {
+ *   createdMs: () => Date.now(),
+ *   primaryAddressId: null,
+ * }
+ *
+ * export const EventDefaults = {
+ *   createdMs: () => Date.now(),
+ * }
  */
 export type GenericTypeMap = {
   [t: string]: {
     type: unknown;
-    constraint: { [k: string]: SqlPrimitive | undefined };
-    filter: NullFilter;
+    constraints: { [k: string]: SqlPrimitive | undefined };
+    filters: NullFilter;
     defaults: NoDefaults;
   };
 };
@@ -40,64 +71,63 @@ export type NullFilter = { _t: "filter" };
 export type NoDefaults = { [k in keyof {}]?: SqlPrimitive | (() => SqlPrimitive) };
 
 /**
- * This defines filter types that can be used for the resource types specified in your TypeMap.
- *
- * For your domain, the `filter` parameter can be literally anything you would like to accept and
- * parse. For example, you might accept several fields on which to filter users, as well as one
- * field on which to filter events:
- *
- * export type ResourceFilter = 
- *    | {
- *      t: "users";
- *      filter: {
- *        name?: string;
- *        email?: string;
- *        ageGreaterThan?: number;
- *      };
- *    }
- *    | {
- *      t: "events";
- *      filter: {
- *        startTimestampLt?: number;
- *        startTimestampGt?: number;
- *      }
- *    }
- *
-export type GenericFilter = {
-  t: string;
-  filter: unknown;
-};
+ * An interface without all the internal methods of the class
+ */
+export interface SqlInterface<ResourceTypeMap extends GenericTypeMap> {
+  get<T extends keyof ResourceTypeMap>(
+    t: T,
+    log: SimpleLoggerInterface
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  get<T extends keyof ResourceTypeMap>(
+    t: T,
+    params: Api.CollectionParams | undefined | null,
+    log: SimpleLoggerInterface
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  get<T extends keyof ResourceTypeMap>(
+    t: T,
+    filter: ResourceTypeMap[T]["filters"] | undefined | null,
+    log: SimpleLoggerInterface
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  get<T extends keyof ResourceTypeMap>(
+    t: T,
+    filter: ResourceTypeMap[T]["filters"] | undefined | null,
+    params: Api.CollectionParams | undefined | null,
+    log: SimpleLoggerInterface
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  get<T extends keyof ResourceTypeMap>(
+    t: T,
+    constraint: ResourceTypeMap[T]["constraints"],
+    log: SimpleLoggerInterface,
+    thrw: true
+  ): Promise<ResourceTypeMap[T]["type"]>;
+  get<T extends keyof ResourceTypeMap>(
+    t: T,
+    constraint: ResourceTypeMap[T]["constraints"],
+    log: SimpleLoggerInterface,
+    thrw?: false
+  ): Promise<ResourceTypeMap[T]["type"] | undefined>;
+}
 
 /**
- * This defines applicable constraints for finding individual resources. The most common one would
- * be, e.g., { t: string, by: { id: string } }
- *
- * You will define all of the possible options for your domain, probably including a default option
- * allowing you to access all resources by id. This might look like the following:
- *
- * export type MyResourceConstraints =
- *   | {
- *     t: "users";
- *     by:
- *       | { id: string | undefined | null }
- *       | { email: string | undefined | null }
- *   }
- *   | {
- *     t: Exclude<TypeMap["t"], "users">;
- *     by: {id: string | undefined | null };
- *   }
- *
- *
-export type ResourceConstraintType = {
-  t: string;
-  by: { [k: string]: string | number | undefined | null;
+ * A very simple, not very powerful SQL Query object. Note that the keyword for each of these
+ * sections will be provided, so the value for `limit`, for example, would be something like
+ * `20,10`, rather than `LIMIT 20,10`.
+ */
+export type Query = {
+  select: Array<string>;
+  from: string;
+  join?: undefined | null | Array<string>;
+  where?: undefined | null | Array<string>;
+  params?: undefined | null | Array<SqlValue>;
+  limit?: undefined | null | string;
+  sort?: undefined | null | Array<string>;
 };
-*/
 
 /**
  * This class abstracts all io access into generalized or specific declarative method calls
  */
-export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap> {
+export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
+  implements SqlInterface<ResourceTypeMap> {
   protected db: SimpleSqlDbInterface;
   protected cache: CacheInterface;
 
@@ -114,9 +144,14 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap> {
     [T in keyof ResourceTypeMap]?: {
       [F in keyof ResourceTypeMap[T]["type"]]?:
         | ResourceTypeMap[T]["type"][F]
-        | (() => ResourceTypeMap[T]["type"][F]);
+        | ((obj: Partial<ResourceTypeMap[T]["type"]>) => ResourceTypeMap[T]["type"][F]);
     };
   } = {};
+
+  /**
+   * Set the default page size
+   */
+  protected defaultPageSize = 25;
 
   /**
    * Get a resource
@@ -129,101 +164,102 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap> {
    */
   public async get<T extends keyof ResourceTypeMap>(
     t: T,
-    filter: ResourceTypeMap[T]["filter"] | undefined | null,
     log: SimpleLoggerInterface
-  ): Promise<Array<ResourceTypeMap[T]["type"]>>;
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
   public async get<T extends keyof ResourceTypeMap>(
     t: T,
-    constraint: ResourceTypeMap[T]["constraint"],
+    params: Api.CollectionParams | undefined | null,
+    log: SimpleLoggerInterface
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  public async get<T extends keyof ResourceTypeMap>(
+    t: T,
+    filter: ResourceTypeMap[T]["filters"] | undefined | null,
+    log: SimpleLoggerInterface
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  public async get<T extends keyof ResourceTypeMap>(
+    t: T,
+    filter: ResourceTypeMap[T]["filters"] | undefined | null,
+    params: Api.CollectionParams | undefined | null,
+    log: SimpleLoggerInterface
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  public async get<T extends keyof ResourceTypeMap>(
+    t: T,
+    constraint: ResourceTypeMap[T]["constraints"],
     log: SimpleLoggerInterface,
     thrw: true
   ): Promise<ResourceTypeMap[T]["type"]>;
   public async get<T extends keyof ResourceTypeMap>(
     t: T,
-    constraint: ResourceTypeMap[T]["constraint"],
+    constraint: ResourceTypeMap[T]["constraints"],
     log: SimpleLoggerInterface,
     thrw?: false
   ): Promise<ResourceTypeMap[T]["type"] | undefined>;
   public async get<T extends keyof ResourceTypeMap>(
     t: T,
-    constraintOrFilter:
-      | ResourceTypeMap[T]["filter"]
-      | ResourceTypeMap[T]["constraint"]
+    logParamsFilterConstraint:
+      | SimpleLoggerInterface
+      | Api.CollectionParams
+      | ResourceTypeMap[T]["filters"]
+      | ResourceTypeMap[T]["constraints"]
       | undefined
       | null,
-    log: SimpleLoggerInterface,
-    thrw?: boolean
-  ): Promise<Array<ResourceTypeMap[T]["type"]> | ResourceTypeMap[T]["type"] | undefined> {
-    const table = this.tableMap[t] || this.sanitizeFieldName(t as string);
+    logOrParams?: SimpleLoggerInterface | Api.CollectionParams | undefined | null,
+    logOrThrw?: boolean | undefined | SimpleLoggerInterface
+  ): Promise<
+    Api.CollectionResponse<ResourceTypeMap[T]["type"]> | ResourceTypeMap[T]["type"] | undefined
+  > {
+    const { log, thrw, collectionParams, constraint: _constraint, filter } = this.assignParams<T>([
+      logParamsFilterConstraint,
+      logOrParams,
+      logOrThrw,
+    ]);
+    const table = <string>(this.tableMap[t] || this.sanitizeFieldName(t as string));
+    const tableAlias = table.slice(0, 2);
 
-    if (!constraintOrFilter || this.isFilter<T>(constraintOrFilter)) {
-      const filter = constraintOrFilter;
+    let query: Query = {
+      select: [`\`${tableAlias}\`.*`],
+      from: `\`${table}\` AS \`${tableAlias}\``,
+    };
+
+    if (filter || !_constraint) {
       log.debug(`Getting ${t} by filter '${JSON.stringify(filter)}'`);
 
-      const clauses: Array<string> = [];
-      const params: Array<SqlValue> = [];
-
-      if (!filter) {
-        log.debug(`No filter passed - applying default pagination and getting all ${t}`);
-      } else {
-        // Otherwise, turn the filters into a more complicated query
+      // Apply filter
+      if (filter && Object.keys(filter).filter((k) => k !== "_t").length > 0) {
+        // Turn the filters into a more complicated query
         for (const field in filter) {
-          const val = filter[field];
-          if (val === undefined) {
-            continue;
-          }
-
-          const results = this.getSqlForFilterField(t, field, val);
-          if (results !== undefined) {
-            log.debug(`Filter clauses returned for field ${t}.${field}.`);
-            clauses.push(...results.clauses);
-            params.push(...results.params);
-          } else {
-            log.debug(`No filter clauses returned for field ${t}.${field}`);
+          if (filter[field] !== undefined) {
+            query = this.mergeQuery(query, this.getSqlForFilterField(t, field, filter[field]));
           }
         }
       }
 
       // Apply pagination and sort
-      // TODO: Figure out how to incorporate this
-      const { limit } = this.constructPagination(t, clauses, params, undefined);
-      const { orderBy } = this.constructSort(t, clauses, params, undefined);
+      query = this.mergeQuery(query, this.processCollectionParams(t, collectionParams));
+
+      // Compose query
+      const { queryStr, params } = this.composeSql(query);
 
       // Now execute the query and return
-      const query =
-        "SELECT * FROM `" +
-        table +
-        "`" +
-        (clauses.length > 0 ? ` WHERE ${clauses.join(" && ")}` : "") +
-        (orderBy ? ` ${orderBy}` : "") +
-        (limit ? ` ${limit}` : "");
-      log.debug(`Final query: ${query}; Params: ${JSON.stringify(params)}`);
-
-      const { rows } = await this.db.query<ResourceTypeMap[T]["type"]>(query, params);
-
+      log.debug(`Final query: ${queryStr}; Params: ${JSON.stringify(params)}`);
+      const { rows } = await this.db.query<ResourceTypeMap[T]["type"]>(queryStr, params);
       log.debug(`Returning ${rows.length} ${t}`);
       return rows;
     } else {
-      const by = constraintOrFilter;
-      const field = Object.keys(by)[0];
-      const val = by[field];
+      const constraint = this.processConstraint(t, _constraint);
 
       // Validate
-      if (!field) {
+      if (constraint.where.length === 0) {
         throw new E.InternalServerError(
-          `No field passed as constraint for resource '${t}'. Constraint: ${JSON.stringify(by)}`
-        );
-      }
-      if (Object.keys(by).length > 1) {
-        throw new E.InternalServerError(
-          `You may only apply a single field as a constraint when querying '${t}'. Constraint ` +
-            `passed: ${JSON.stringify(by)}`
+          `No constraints passed for resource '${t}'. Constraint: ${JSON.stringify(_constraint)}`
         );
       }
 
-      log.debug(`Getting ${t} by ${field}:${val} from database`);
+      log.debug(`Getting ${t} by ${JSON.stringify(constraint)} from database`);
 
-      if (!val) {
+      // If there's one or more undefined param, we can't use it
+      if (constraint.params.filter((v) => v === undefined).length > 0) {
+        log.info(`Constraint is incomplete. Cannot use. ${JSON.stringify(constraint)}`);
         if (thrw) {
           throw new E.NotFound(
             `No constraint value passed for ${t}, so the resource cannot be found.`
@@ -234,20 +270,25 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap> {
       }
 
       return this.cache.get<ResourceTypeMap[T]["type"]>(
-        `${t}-${field}:${val}`,
+        `${t}-${JSON.stringify(constraint)}`,
         async () => {
-          const query =
-            "SELECT * FROM `" + table + "` WHERE `" + this.sanitizeFieldName(field) + "` = ?";
-          const { rows } = await this.db.query<T>(query, [val]);
+          // Compose query
+          query = this.mergeQuery(query, <Partial<Query>>constraint);
+          const { queryStr, params } = this.composeSql(query);
+
+          // Execute
+          log.debug(`Final query: ${queryStr}; Params: ${JSON.stringify(params)}`);
+          const { rows } = await this.db.query<ResourceTypeMap[T]["type"]>(queryStr, params);
+
           if (thrw && rows.length === 0) {
-            throw new E.NotFound(`${t} ${field}:${val} not found`);
+            throw new E.NotFound(`${t} not found for the given parameters`);
           }
 
           // Warn if more than one found
           if (rows.length > 1) {
             log.warning(
-              `More than one ${t} found when searching by ${field}:${val}. Query: ${query}; ` +
-                `Params: ${JSON.stringify([val])}`
+              `More than one ${t} found when searching with constraint: Query: ${queryStr}; ` +
+                `Params: ${JSON.stringify(params)}`
             );
           }
 
@@ -266,10 +307,10 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap> {
     t: T,
     field: string,
     val: any
-  ): { clauses: Array<string>; params: Array<any> } | undefined {
+  ): Partial<Query> {
     // Ignore the special '_t' tag
     if (field === "_t") {
-      return undefined;
+      return {};
     }
 
     // Sanitize field (shouldn't be necessary, but high-stakes, so we're doing it)
@@ -277,55 +318,121 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap> {
     if (Array.isArray(val)) {
       // If we're dealing with an array, use a set
       return {
-        clauses: ["`" + field + "` IN (?)"],
+        where: ["`" + field + "` IN (?)"],
         params: [val],
       };
     } else {
       // Otherwise, use an equals
       return {
-        clauses: ["`" + field + "` = ?"],
+        where: ["`" + field + "` = ?"],
         params: [val],
       };
     }
   }
 
   /**
-   * Apply pagination parameters to existing clauses/params
-   * TODO: Figure out how to do this
+   * Return query parts derived from the passed in collection params. Note: This library only
+   * supports number-based cursors at this time. For any other cursor scheme, just override
+   * this method.
    */
-  protected constructPagination<T extends keyof ResourceTypeMap>(
+  protected processCollectionParams<T extends keyof ResourceTypeMap>(
     t: T,
-    clauses: Array<string>,
-    params: Array<SqlValue>,
-    pg: undefined | null | { size?: number; num: number }
-  ): { limit: string } {
-    const size = pg?.size || 25;
-    const num = pg?.num || 1;
-    return { limit: `LIMIT ${(num - 1) * size}, ${size}` };
+    params: undefined | Api.CollectionParams
+  ): Partial<Query> {
+    const query: Partial<Query> = {};
+
+    // Pagination
+    const pg = params?.__pg;
+    if (pg) {
+      let num = 1;
+      const size = pg.size || this.defaultPageSize;
+
+      const _cursor = pg.cursor;
+      if (_cursor) {
+        const cursor = Buffer.from(_cursor, "base64").toString("utf8");
+        const match = cursor.match(/^num:([1-9][0-9]*)$/);
+        if (!match) {
+          throw new E.BadRequest(
+            `Invalid cursor: '${_cursor}'. Cursors are expected to be base64-encoded uris ` +
+              `matching the regex /^num:[1-9][0-9]*$/.`
+          );
+        }
+        num = Number(match[1]);
+      }
+      query.limit = `${(num - 1) * size}, ${size}`;
+    } else {
+      // Default to first page and ${defaultPageSize} results
+      query.limit = `0, ${this.defaultPageSize}`;
+    }
+
+    // Sort
+    const sort = params?.__sort?.trim();
+    if (sort) {
+      query.sort = this.parseSort(t, sort).map((s) => `\`${s[0]}\` ${s[1]}`);
+    }
+
+    // Return
+    return query;
   }
 
   /**
-   * Construct sort parameters
-   * TODO: Figure out how to do this
+   * Parse a sort string
+   *
+   * This is a generic method that can be overridden by descendent classes to provide validation
+   * for sort fields.
    */
-  protected constructSort<T extends keyof ResourceTypeMap>(
+  protected parseSort<T extends keyof ResourceTypeMap>(
     t: T,
-    clauses: Array<string>,
-    params: Array<SqlValue>,
-    sort: undefined | null | Array<[field: string, dir: "asc" | "desc"]>
-  ): { orderBy: string } {
-    if (!sort || sort.length === 0) {
-      return { orderBy: "" };
-    } else {
-      return { orderBy: ` ORDER BY ${sort.map((s) => "`" + s[0] + "` " + s[1]).join(", ")}` };
+    sortStr: string
+  ): Array<[string, "ASC" | "DESC"]> {
+    const sort: Array<[string, "ASC" | "DESC"]> = [];
+    const clauses = sortStr.split(/[\s]*,[\s]*/).filter((s) => s !== "");
+    for (const clause of clauses) {
+      const match = clause.match(/^([+-]?)(.+)$/);
+      if (!match) {
+        throw new E.BadRequest(
+          `Invalid sort clause: '${clause}'. Sort must be a comma-separated list of clauses ` +
+            `matching the regex /^([+-]?)(.+)$/`
+        );
+      }
+      sort.push([match[2], sortDir[match[1]]]);
     }
+    return sort;
+  }
+
+  /**
+   * Turn a passed in constraint object into a partial Query
+   */
+  protected processConstraint<T extends keyof ResourceTypeMap>(
+    t: T,
+    obj: { [k: string]: SqlPrimitive | undefined }
+  ): { where: Array<string>; params: Array<SqlPrimitive | undefined> } {
+    const where = Object.keys(obj).map((k) => `\`${k}\` = ?`);
+    const params = Object.values(obj);
+    return { where, params };
+  }
+
+  /**
+   * Compose a final query from the given query object
+   */
+  protected composeSql(q: Query): { queryStr: string; params: Array<SqlValue> | undefined } {
+    return {
+      queryStr:
+        `SELECT ${q.select.join(", ")} ` +
+        `FROM ${q.from}` +
+        (q.join && q.join.length > 0 ? ` JOIN ${q.join.join(" JOIN ")}` : "") +
+        (q.where && q.where.length > 0 ? ` WHERE ${q.where.join(" && ")}` : "") +
+        (q.sort && q.sort.length > 0 ? ` ORDER BY ${q.sort.join(", ")}` : "") +
+        (q.limit ? ` LIMIT ${q.limit}` : ""),
+      params: q.params && q.params.length > 0 ? q.params : undefined,
+    };
   }
 
   protected sanitizeFieldName(field: string): string {
     return field.replace(/[`'"]+|--+/g, "");
   }
 
-  protected isFilter<T extends keyof ResourceTypeMap>(f: any): f is ResourceTypeMap[T]["filter"] {
+  protected isFilter<T extends keyof ResourceTypeMap>(f: any): f is ResourceTypeMap[T]["filters"] {
     return f._t === "filter";
   }
 
@@ -519,4 +626,116 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap> {
     return resource;
   }
   */
+
+  protected mergeQuery(base: Query, add: Partial<Query>): Query {
+    const result: Query = {
+      select: [...base.select, ...(add.select || [])],
+      from: add.from || base.from,
+    };
+    if (base.join || add.join) {
+      result.join = [...(base.join || []), ...(add.join || [])];
+    }
+    if (base.where || add.where) {
+      result.where = [...(base.where || []), ...(add.where || [])];
+    }
+    if (base.params || add.params) {
+      result.params = [...(base.params || []), ...(add.params || [])];
+    }
+    if (add.limit || base.limit) {
+      result.limit = add.limit || base.limit;
+    }
+    if (base.sort || add.sort) {
+      result.sort = [...(base.sort || []), ...(add.sort || [])];
+    }
+    return result;
+  }
+
+  protected assignParams<T extends keyof ResourceTypeMap>(
+    opts: [
+      (
+        | SimpleLoggerInterface
+        | Api.CollectionParams
+        | ResourceTypeMap[T]["filters"]
+        | ResourceTypeMap[T]["constraints"]
+        | undefined
+        | null
+      ),
+      SimpleLoggerInterface | Api.CollectionParams | undefined | null,
+      SimpleLoggerInterface | boolean | undefined
+    ]
+  ): {
+    log: SimpleLoggerInterface;
+    thrw: boolean;
+    collectionParams: Api.CollectionParams | undefined;
+    constraint: ResourceTypeMap[T]["constraints"] | undefined;
+    filter: ResourceTypeMap[T]["filters"] | undefined;
+  } {
+    const logIndex = isLog(opts[0]) ? 0 : isLog(opts[1]) ? 1 : 2;
+    const log = <SimpleLoggerInterface>opts[logIndex];
+
+    const others = <
+      [
+        (
+          | ResourceTypeMap[T]["filters"]
+          | ResourceTypeMap[T]["constraints"]
+          | Api.CollectionParams
+          | undefined
+          | null
+        ),
+        Api.CollectionParams | boolean | undefined | null
+      ]
+    >(logIndex === 0
+      ? [opts[1], opts[2]]
+      : logIndex === 1
+      ? [opts[0], opts[2]]
+      : [opts[0], opts[1]]);
+
+    const thrw = typeof others[1] === "boolean" ? others[1] : false;
+
+    if (
+      (typeof others[0] === "undefined" || others[0] === null) &&
+      (typeof others[1] === "undefined" || others[1] === null)
+    ) {
+      return {
+        log,
+        thrw,
+        collectionParams: undefined,
+        constraint: undefined,
+        filter: undefined,
+      };
+    }
+
+    const filter = others[0];
+    if (this.isFilter<T>(filter)) {
+      return {
+        log,
+        thrw,
+        filter,
+        collectionParams: <Api.CollectionParams | undefined>(others[1] || undefined),
+        constraint: undefined,
+      };
+    } else {
+      return {
+        log,
+        thrw,
+        filter: undefined,
+        ...(isCollectionParams(others[0])
+          ? { collectionParams: others[0], constraint: undefined }
+          : { collectionParams: undefined, constraint: others[0] || undefined }),
+      };
+    }
+  }
 }
+
+const isLog = (thing: any): thing is SimpleLoggerInterface => {
+  return thing && thing.debug && thing.info && thing.notice && thing.error;
+};
+const isCollectionParams = (thing: any): thing is Api.CollectionParams => {
+  return thing && (thing.__pg || thing.__sort);
+};
+
+const sortDir: { [k: string]: "ASC" | "DESC" } = {
+  "": "ASC",
+  "+": "ASC",
+  "-": "DESC",
+};
