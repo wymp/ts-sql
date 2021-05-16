@@ -1,6 +1,6 @@
 {
   "name": "@wymp/sql",
-  "version": "1.0.0-beta3",
+  "version": "1.0.0-beta4",
   "description": "A small typescript package providing generalized and customizable sql database access",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,8 +9,7 @@
   },
   "scripts": {
     "test": "jest",
-    "prepublishOnly": "rm -Rf dist; npx tsc",
-    "postinstall": "husky install"
+    "prepublishOnly": "rm -Rf dist; npx tsc"
   },
   "repository": {
     "type": "git",
