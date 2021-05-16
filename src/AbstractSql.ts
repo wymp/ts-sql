@@ -70,6 +70,9 @@ export type IdConstraint = { id: string | number | Buffer | undefined | null };
 export type NullFilter = { _t: "filter" };
 export type NoDefaults = { [k in keyof {}]?: SqlPrimitive | (() => SqlPrimitive) };
 
+// Helper for easily making filter types
+export type Filter<T> = { _t: "filter" } & { [K in keyof T]: undefined | null | T[K] };
+
 /**
  * An interface without all the internal methods of the class
  */
@@ -327,11 +330,15 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
         params: [val],
       };
     } else {
-      // Otherwise, use an equals
-      return {
-        where: ["`" + field + "` = ?"],
-        params: [val],
-      };
+      // Otherwise, use an equals (or "IS NULL")
+      if (val === null) {
+        return { where: ["`" + field + "` IS NULL"] };
+      } else {
+        return {
+          where: ["`" + field + "` = ?"],
+          params: [val],
+        };
+      }
     }
   }
 
@@ -373,7 +380,9 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     // Sort
     const sort = params?.__sort?.trim();
     if (sort) {
-      query.sort = this.parseSort(t, sort).map((s) => `\`${s[0]}\` ${s[1]}`);
+      query.sort = this.parseSort(t, sort).map(
+        (s) => `\`${this.sanitizeFieldName(s[0])}\` ${s[1]}`
+      );
     }
 
     // Return
