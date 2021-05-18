@@ -20,11 +20,7 @@ class TestIo extends AbstractSql<Test.TypeMap> {
     };
 
     this.tableMap = { "org-roles": "organization-roles" };
-    this.defaults = {
-      users: Test.UserDefaults,
-      addresses: Test.AddressDefaults,
-      organizations: Test.OrganizationDefaults,
-    };
+    this.defaults = Test.Defaults;
   }
 
   public testHexToBuffers<
@@ -270,6 +266,27 @@ describe("AbstractSql Class", () => {
         query: "SELECT `us`.* FROM `users` AS `us` WHERE `id` = ?",
       });
       expect(Buffer.isBuffer(q[0].params![0])).toBe(true);
+    });
+  });
+
+  describe("save", () => {
+    test("works", async () => {
+      const user = await io.save(
+        "users",
+        { name: "Milli Vanilli", email: "test@example.com" },
+        log
+      );
+      expect(user).toMatchObject({
+        id: expect.any(String),
+        name: "Milli Vanilli",
+        email: "test@example.com",
+        dob: Test.Defaults["users"].dob,
+        deleted: Test.Defaults["users"].deleted,
+        verified: Test.Defaults["users"].verified,
+        primaryAddressId: Test.Defaults["users"].primaryAddressId,
+        status: Test.Defaults["users"].status,
+        createdMs: expect.any(Number),
+      });
     });
   });
 

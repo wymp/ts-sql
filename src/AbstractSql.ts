@@ -1,4 +1,4 @@
-//import { v6 as uuid } from "uuid-with-v6";
+import { v6 as uuid } from "uuid-with-v6";
 import {
   SimpleSqlDbInterface,
   SqlValue,
@@ -6,13 +6,17 @@ import {
   SimpleLoggerInterface,
 } from "@wymp/ts-simple-interfaces";
 import * as E from "@openfinanceio/http-errors";
-import { Api } from "@wymp/types";
+import { Api, Auth, Audit, PartialSelect } from "@wymp/types";
+
+export { uuid };
 
 export interface CacheInterface {
   get<T>(k: string, cb: () => Promise<T>, ttl?: number, log?: SimpleLoggerInterface): Promise<T>;
   get<T>(k: string, cb: () => T, ttl?: number, log?: SimpleLoggerInterface): T;
   clear(k: string | RegExp): void | unknown;
 }
+
+export type SqlObj = { [k: string]: SqlPrimitive };
 
 /**
  * This is a type that you would define within your own domain. It specifies a string type
@@ -57,21 +61,30 @@ export interface CacheInterface {
  *   createdMs: () => Date.now(),
  * }
  */
-export type GenericTypeMap = {
+export type GenericTypeMap<T extends SqlObj = {}> = {
   [t: string]: {
-    type: unknown;
-    constraints: { [k: string]: SqlPrimitive | undefined };
+    type: T;
+    constraints: { [k in keyof T]?: SqlPrimitive | undefined };
     filters: NullFilter;
-    defaults: NoDefaults;
+    defaults: NoDefaults<T>;
   };
 };
 
 export type IdConstraint = { id: string | number | Buffer | undefined | null };
 export type NullFilter = { _t: "filter" };
-export type NoDefaults = { [k in keyof {}]?: SqlPrimitive | (() => SqlPrimitive) };
+export type NoDefaults<T extends SqlObj> = { [k in keyof T]?: DefaultVal };
+export type DefaultVal = SqlPrimitive | (() => SqlPrimitive);
+export type Defaults<ResourceTypeMap extends GenericTypeMap> = {
+  [T in keyof ResourceTypeMap]: ResourceTypeMap[T]["defaults"];
+};
 
 // Helper for easily making filter types
 export type Filter<T> = { _t: "filter" } & { [K in keyof T]: undefined | null | T[K] };
+
+// Helpers for defaults
+export const buffId = { id: () => hexToBuffer(uuid()) };
+export const strId = { id: () => uuid() };
+export const both = <A, B>(a: A, b: B) => ({ ...a, ...b });
 
 /**
  * An interface without all the internal methods of the class
@@ -144,18 +157,38 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   /**
    * Define default values for fields of various types
    */
-  protected defaults: {
-    [T in keyof ResourceTypeMap]?: {
-      [F in keyof ResourceTypeMap[T]["type"]]?:
-        | ResourceTypeMap[T]["type"][F]
-        | ((obj: Partial<ResourceTypeMap[T]["type"]>) => ResourceTypeMap[T]["type"][F]);
-    };
+  protected defaults: Defaults<ResourceTypeMap>;
+
+  /**
+   * Define wich fields are relationships for any given type. This determines how change set are
+   * created and published.
+   */
+  protected resourceRelationships: {
+    [k in keyof ResourceTypeMap]?: { [field: string]: string };
   } = {};
+
+  /**
+   * If any tables have alternate PKs, define them here (default is `id`)
+   */
+  protected primaryKeys: { [K in keyof ResourceTypeMap]?: keyof ResourceTypeMap[K]["type"] } = {};
 
   /**
    * Set the default page size
    */
   protected defaultPageSize = 25;
+
+  /**
+   * (Optional) Auditor client. This allows you to flow data changes into an auditing system.
+   */
+  protected audit: Audit.ClientInterface | null = null;
+
+  /**
+   * (Optional) Pubsub. This allows the service to publish friendlier "domain" messages about
+   * data events. Note that this is largely the same data as the audit client, but the format
+   * will be easier to use, and it additionally allows some separation between an auditing
+   * system and a more generalized data environment.
+   */
+  protected pubsub: { publish(msg: unknown): Promise<unknown> } | null = null;
 
   /**
    * Get a resource
@@ -450,90 +483,81 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     return f._t === "filter";
   }
 
-  /*
   public async update<T extends keyof ResourceTypeMap>(
     t: T,
-    _resource: Partial<ResourceTypemap[T]["type"]> & { id: string },
+    _resource: Partial<ResourceTypeMap[T]["type"]> & { id: string },
     auth: Auth.ReqInfo,
     log: SimpleLoggerInterface
   ): Promise<ResourceTypeMap[T]["type"]> {
-    log.info(`Updating ${t} '${_resource.id}'`);
+    const pk = <keyof ResourceTypeMap[T]["type"]>(this.primaryKeys[t] || "id");
+    const pkVal = _resource[pk];
+    const pkValStr = Buffer.isBuffer(pkVal) ? pkVal.toString("hex") : `${pkVal}`;
+    log.info(`Updating ${t} '${pkValStr}'`);
 
-    const currentResource = await this.get<ResourceTypeMap[T]["type"]>(
-      t,
-      { id: _resource.id },
-      log,
-      false
-    );
+    const currentResource = await this.get(t, { [pk]: pkVal }, log, false);
     if (!currentResource) {
       throw new E.NotFound(
-        `Resource of type '${t}', id '${_resource.id}', was not found.`,
-        `RESOURCE-NOT-FOUND.${t.toUpperCase()}`
+        `Resource of type '${t}', ${pk} '${pkValStr}', was not found.`,
+        `RESOURCE-NOT-FOUND.${(t as string).toUpperCase()}`
       );
     }
 
     // Remove the id field, since we don't want accidental changes
-    const resourceWithouId = { ..._resource };
-    delete resourceWithoutId.id;
+    const resourceWithoutId = { ..._resource };
+    delete resourceWithoutId[pk];
 
     const resource: ResourceTypeMap[T]["type"] = {
       ...currentResource,
       ..._resource,
     };
 
-    return await this.save<ResourceTypeMap[T]["type"]>(t, resource, auth, log, currentResource);
+    return await this.save(t, resource, auth, log, currentResource);
   }
 
   public async save<T extends keyof ResourceTypeMap>(
     t: T,
-    _resource: PartialSelect<ResourceTypeMap[T]["type"], "id" | keyof typeof this.defaults[T]>,
+    _resource: PartialSelect<ResourceTypeMap[T]["type"], keyof ResourceTypeMap[T]["defaults"]>,
     auth: Auth.ReqInfo,
     log: SimpleLoggerInterface,
     currentResource?: ResourceTypeMap[T]["type"]
   ): Promise<ResourceTypeMap[T]["type"]> {
-    log.info(`Saving resource '${t}${_resource.id ? `.${_resource.id}` : ""}`);
+    const pk = <keyof ResourceTypeMap[T]["type"]>(this.primaryKeys[t] || "id");
+    log.info(`Saving resource '${t}${_resource[pk] ? `.${_resource[pk]}` : ""}`);
 
-    if (!currentResource && _resource.id) {
-      currentResource = await this.get<ResourceTypeMap[T]["type"]>({ t, by: { t: "id", v: _resource.id } }, log, false);
+    if (!currentResource && _resource[pk]) {
+      currentResource = await this.get(t, { t: pk, v: _resource[pk] }, log, false);
     }
 
     let resource: ResourceTypeMap[T]["type"];
 
     // If this is a new resource, fill in defaults
     if (!currentResource) {
-      const defaults: { [K in keyof (typeof this.defaults)[T]]: ResourceTypeMap[T]["type"][K] } =
-        Object.keys(this.defaults[t] || {}).map((k) => {
-          return {
-            [k]: typeof this.defaults[t][k] === "function"
-              ? this.defaults[t][k]()
-              : this.defaults[t][k];
-          }
-        }).reduce((agg, cur) => { ...agg, ...cur }, {});
       resource = {
-        id: _resource.id || uuid(),
-        ...defaults,
+        ...this.getDefaults(t),
         ..._resource,
-      }
+      };
     } else {
       // Otherwise, fill the resource in with the existing resource
       resource = {
         ...currentResource,
         ..._resource,
-      }
-    };
+      };
+    }
 
     // Aggregate and format changes
     const changes: Audit.Changes<ResourceTypeMap[T]["type"]> = {};
     for (const k of <Array<keyof ResourceTypeMap[T]["type"]>>Object.keys(resource)) {
       // If it's not pertinent or it hasn't changed, skip
-      if (k === "id" || (currentResource && resource[k] === currentResource[k])) {
+      // TODO: Handle non-primitives, like Buffers and Dates
+      if (currentResource && resource[k] === currentResource[k]) {
         continue;
       }
 
       const v = resource[k];
 
       // Rels
-      if (ResourceRelationships[t].includes(k)) {
+      const rels = this.resourceRelationships[t];
+      if (rels && rels[<string>k]) {
         changes[k] = {
           t: "rel",
           action:
@@ -542,8 +566,8 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
               : currentResource && currentResource[k] !== null && v === null
               ? "deleted"
               : "changed",
-          relType: "issuers",
-          relId: <string>v,
+          relType: rels[<string>k],
+          relId: <string>(Buffer.isBuffer(v) ? v.toString("hex") : v),
         };
       } else {
         changes[k] = {
@@ -560,38 +584,45 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     }
 
     // Otherwise, insert/update
-    const table = this.tableMap[t] || this.sanitizeFieldName(t);
+    const table = this.tableMap[t] || this.sanitizeFieldName(<string>t);
     if (currentResource) {
+      const updates = Object.keys(changes)
+        .filter((k) => k !== pk)
+        .reduce<Audit.Changes<ResourceTypeMap[T]["type"]>>((u, _k) => {
+          const k = <keyof ResourceTypeMap[T]["type"]>_k;
+          u[k] = changes[k];
+          return u;
+        }, {});
+
       // prettier-ignore
       const query = "UPDATE `" + table + "` " +
-        `SET ${Object.keys(changes).map(k => `\`${k}\` = ?`).join(", ")} ` +
-        "WHERE id = ?";
+        `SET ${Object.keys(updates).map(k => `\`${k}\` = ?`).join(", ")} ` +
+        "WHERE `" + pk + "` = ?";
       const params = [
-        ...Object.values(changes).map((v) => {
+        ...Object.keys(updates).map((k) => {
+          const v = updates[<keyof typeof updates>k]!;
           if (v.t === "attr") {
-            return v.next;
+            return (v as any).next;
           } else {
-            return v.action === "deleted" ? null : v.relId;
+            return (v as any).action === "deleted" ? null : (v as any).relId;
           }
         }),
-        resource.id,
+        resource[pk],
       ];
       await this.db.query(query, params);
     } else {
       // prettier-ignore
       const query = "INSERT INTO `" + table + "` " +
-        "(`id`, `" + Object.keys(changes).join("`, `") + "`) VALUES (?)";
+        "(`" + Object.keys(changes).join("`, `") + "`) VALUES (?)";
       const params = [
-        [
-          resource.id,
-          ...Object.values(changes).map((v) => {
-            if (v.t === "attr") {
-              return v.next;
-            } else {
-              return v.action === "deleted" ? null : v.relId;
-            }
-          }),
-        ],
+        Object.keys(changes).map((k) => {
+          const v = changes[<keyof typeof changes>k]!;
+          if (v.t === "attr") {
+            return (v as any).next;
+          } else {
+            return (v as any).action === "deleted" ? null : (v as any).relId;
+          }
+        }),
       ];
       //console.log(query, params);
       await this.db.query(query, params);
@@ -601,45 +632,127 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     this.cache.clear(new RegExp(`${t}-.*`));
 
     // Publish audit message
-    log.debug(`Publishing audit message`);
-    if (currentResource) {
-      this.audit.update<ResourceTypeMap[T]["type"]>({
-        auth,
-        targetType: t,
-        targetId: resource.id,
-        changes,
-      });
-    } else {
-      this.audit.create({
-        auth,
-        targetType: t,
-        targetId: resource.id,
-      });
+    const p: Array<Promise<unknown>> = [];
+    if (this.audit) {
+      const id = resource[pk];
+      const targetType = <string>t;
+      const targetId = Buffer.isBuffer(id) ? id.toString("hex") : `${id}`;
+      log.debug(`Publishing audit message`);
+      if (currentResource) {
+        p.push(
+          this.audit.update<ResourceTypeMap[T]["type"]>({
+            auth,
+            targetType,
+            targetId,
+            changes,
+          })
+        );
+      } else {
+        p.push(
+          this.audit.create({
+            auth,
+            targetType,
+            targetId,
+          })
+        );
+      }
     }
 
     // Publish domain message
-    log.debug(`Publishing domain message`);
-    if (currentResource) {
-      await this.pubsub.publish(<Globals.Messages.SubmittedUpdate<ResourceTypeMap[T]["type"]>>{
-        action: "updated",
-        resource: { type: t, id: currentResource.id },
-        changedFields: Object.entries(changes)
-          // Regretably, there's no easy way to avoid an any cast here....
-          .reduce<any>((agg, [k, v]) => {
-            agg[k] = v.t === "attr" ? v.next : v.relId;
-            return agg;
-          }, {}),
-      });
-    } else {
-      await this.pubsub.publish({
-        action: "created",
-        resource: { type: t, ...resource },
-      });
+    if (this.pubsub) {
+      log.debug(`Publishing domain message`);
+      p.push(
+        this.pubsub.publish({
+          action: currentResource ? "updated" : "created",
+          resource: { type: t, ...resource },
+        })
+      );
     }
 
+    await Promise.all(p);
     return resource;
   }
-  */
+
+  public async delete<T extends keyof ResourceTypeMap>(
+    t: T,
+    resource: ResourceTypeMap[T]["type"],
+    auth: Auth.ReqInfo,
+    log: SimpleLoggerInterface
+  ): Promise<void>;
+  public async delete<T extends keyof ResourceTypeMap>(
+    t: T,
+    id: string | Buffer | undefined | null,
+    auth: Auth.ReqInfo,
+    log: SimpleLoggerInterface
+  ): Promise<void>;
+  public async delete<T extends keyof ResourceTypeMap>(
+    t: T,
+    resourceOrId: ResourceTypeMap[T]["type"] | string | Buffer | undefined | null,
+    auth: Auth.ReqInfo,
+    log: SimpleLoggerInterface
+  ): Promise<void> {
+    const pk = <keyof ResourceTypeMap[T]["type"]>(this.primaryKeys[t] || "id");
+    let pkVal: Buffer | string | undefined | null = null;
+    if (Buffer.isBuffer(resourceOrId) || typeof resourceOrId === "string") {
+      pkVal = resourceOrId;
+    } else if ((resourceOrId as any)[pk]) {
+      pkVal = (resourceOrId as any)[pk];
+    }
+    const pkValStr = Buffer.isBuffer(pkVal) ? pkVal.toString("hex") : `${pkVal}`;
+    log.debug(`Deleting ${t} with id ${pkValStr}`);
+    const resource = this.get(t, { [pk]: pkVal }, log, false);
+    if (resource) {
+      const table = <string>(this.tableMap[t] || this.sanitizeFieldName(t as string));
+      await this.db.query(
+        "DELETE FROM `" + table + "` WHERE `" + pk + "` = ?",
+        pkVal ? [pkVal] : []
+      );
+      log.debug(`Resource deleted publishing messages`);
+
+      // Bust cache
+      this.cache.clear(new RegExp(`${t}-.*`));
+
+      // Publish audit message
+      const p: Array<Promise<unknown>> = [];
+      if (this.audit) {
+        const targetType = <string>t;
+        log.debug(`Publishing audit message`);
+        p.push(
+          this.audit.delete({
+            auth,
+            targetType,
+            targetId: pkValStr,
+          })
+        );
+      }
+
+      // Publish domain message
+      if (this.pubsub) {
+        log.debug(`Publishing domain message`);
+        p.push(
+          this.pubsub.publish({
+            action: "deleted",
+            resource: { type: t, ...resource },
+          })
+        );
+      }
+
+      await Promise.all(p);
+    } else {
+      log.info(`Resource not found. Nothing to delete.`);
+    }
+  }
+
+  protected getDefaults<T extends keyof ResourceTypeMap>(
+    t: T
+  ): { [K in keyof Defaults<ResourceTypeMap>[T]]: T[K] } {
+    const defaults: any = {};
+    for (const k in this.defaults[t]) {
+      const val = this.defaults[t][k];
+      defaults[k] = typeof val === "function" ? val() : val;
+    }
+    return defaults;
+  }
 
   protected mergeQuery(base: Query, add: Partial<Query>): Query {
     const result: Query = {
@@ -793,16 +906,24 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   }
 
   public bufferToUuid(buf: Buffer): string {
-    return `${bite(buf, 0, 4)}-${bite(buf, 4, 6)}-${bite(buf, 6, 8)}-${bite(buf, 8, 10)}-${bite(
-      buf,
-      10
-    )}`;
+    return bufferToUuid(buf);
   }
 
   public hexToBuffer(hex: string): Buffer {
-    return Buffer.from(hex.replace(/-/g, ""), "hex");
+    return hexToBuffer(hex);
   }
 }
+
+const bufferToUuid = (buf: Buffer): string => {
+  return `${bite(buf, 0, 4)}-${bite(buf, 4, 6)}-${bite(buf, 6, 8)}-${bite(buf, 8, 10)}-${bite(
+    buf,
+    10
+  )}`;
+};
+
+const hexToBuffer = (hex: string): Buffer => {
+  return Buffer.from(hex.replace(/-/g, ""), "hex");
+};
 
 const isLog = (thing: any): thing is SimpleLoggerInterface => {
   return thing && thing.debug && thing.info && thing.notice && thing.error;

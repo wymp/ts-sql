@@ -1,4 +1,4 @@
-import { IdConstraint, NullFilter, NoDefaults } from "../src";
+import { IdConstraint, NullFilter, strId, both } from "../src";
 
 export namespace Test {
   export type User = {
@@ -12,14 +12,6 @@ export namespace Test {
     status: "signed-up" | "ready-for-review" | "approved" | "denied" | "needs-followup";
     createdMs: number;
   };
-  export const UserDefaults = {
-    dob: null,
-    deleted: 0 as const,
-    verified: 0 as const,
-    primaryAddressId: null,
-    status: "signed-up" as const,
-    createdMs: () => Date.now(),
-  };
 
   export type Address = {
     id: string;
@@ -30,17 +22,11 @@ export namespace Test {
     country: string;
     zip: string;
   };
-  export const AddressDefaults = {
-    street2: null,
-  };
 
   export type Organization = {
     id: string;
     name: string;
     createdMs: number;
-  };
-  export const OrganizationDefaults = {
-    createdMs: () => Date.now(),
   };
 
   export type OrgRole = {
@@ -54,6 +40,25 @@ export namespace Test {
     name: string;
     type: "dog" | "cat" | "mouse";
     ownerId: string;
+  };
+
+  export const Defaults = {
+    users: both(strId, {
+      dob: null,
+      deleted: 0 as const,
+      verified: 0 as const,
+      primaryAddressId: null,
+      status: "signed-up" as const,
+      createdMs: () => Date.now(),
+    }),
+    addresses: both(strId, {
+      street2: null,
+    }),
+    organizations: both(strId, {
+      createdMs: () => Date.now(),
+    }),
+    "org-roles": strId,
+    pets: strId,
   };
 
   export type TypeMap = {
@@ -70,7 +75,7 @@ export namespace Test {
         };
         emailLike?: string;
       }>;
-      defaults: typeof UserDefaults;
+      defaults: typeof Defaults["users"];
     };
 
     addresses: {
@@ -80,14 +85,14 @@ export namespace Test {
         country?: string | Array<string>;
         zip?: string | Array<string>;
       }>;
-      defaults: typeof AddressDefaults;
+      defaults: typeof Defaults["addresses"];
     };
 
     organizations: {
       type: Organization;
       constraints: IdConstraint;
       filters: NullFilter;
-      defaults: NoDefaults;
+      defaults: typeof Defaults["organizations"];
     };
 
     "org-roles": {
@@ -97,7 +102,7 @@ export namespace Test {
         organizationId?: string;
         userId?: string;
       }>;
-      defaults: NoDefaults;
+      defaults: typeof Defaults["org-roles"];
     };
 
     pets: {
@@ -108,7 +113,7 @@ export namespace Test {
         type?: Pet["type"];
         nameLike?: string;
       }>;
-      defaults: NoDefaults;
+      defaults: typeof Defaults["pets"];
     };
   };
 }
