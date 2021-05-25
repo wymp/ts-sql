@@ -1,4 +1,4 @@
-import * as E from "@openfinanceio/http-errors";
+import * as E from "@wymp/http-errors";
 import { MockSimpleLogger } from "@wymp/ts-simple-interfaces-testing";
 import { AbstractSql, Query } from "../src";
 import { MockSql } from "./MockSql";

@@ -271,6 +271,16 @@ export const generateAndOutputTypes = async (clean: FinalizeFunc) => {
       }
     }
 
+    // Add "type" to api types if not present
+    if (!apiEntry.fields.type) {
+      apiEntry.fields.type = {
+        t: "attr",
+        rawType: table,
+        displayType: `"${table}"`,
+        nullable: false,
+      };
+    }
+
     attrs.push(attrEntry);
     api.push(apiEntry);
     db.push(dbEntry);

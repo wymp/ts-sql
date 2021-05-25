@@ -1,11 +1,11 @@
-import { v6 as uuid } from "uuid-with-v6";
+import { v6 as uuid } from "@kael-shipman/uuid-with-v6";
 import {
   SimpleSqlDbInterface,
   SqlValue,
   SqlPrimitive,
   SimpleLoggerInterface,
 } from "@wymp/ts-simple-interfaces";
-import * as E from "@openfinanceio/http-errors";
+import * as E from "@wymp/http-errors";
 import { Api, Auth, Audit, PartialSelect } from "@wymp/types";
 
 export { uuid };
@@ -143,7 +143,8 @@ export type Query = {
  * This class abstracts all io access into generalized or specific declarative method calls
  */
 export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
-  implements SqlInterface<ResourceTypeMap> {
+  implements SqlInterface<ResourceTypeMap>
+{
   protected db: SimpleSqlDbInterface;
   protected cache: CacheInterface;
   protected convertBuffersAndHex: boolean = true;
@@ -245,11 +246,13 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   ): Promise<
     Api.CollectionResponse<ResourceTypeMap[T]["type"]> | ResourceTypeMap[T]["type"] | undefined
   > {
-    const { log, thrw, collectionParams, constraint: _constraint, filter } = this.assignParams<T>([
-      logParamsFilterConstraint,
-      logOrParams,
-      logOrThrw,
-    ]);
+    const {
+      log,
+      thrw,
+      collectionParams,
+      constraint: _constraint,
+      filter,
+    } = this.assignParams<T>([logParamsFilterConstraint, logOrParams, logOrThrw]);
     const table = <string>(this.tableMap[t] || this.sanitizeFieldName(t as string));
     const tableAlias = table.slice(0, 2);
 
@@ -296,7 +299,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
         );
       }
 
-      log.debug(`Getting ${t} by ${JSON.stringify(constraint)} from database`);
+      log.debug(`Getting ${t} using ${JSON.stringify(constraint)} from database`);
 
       // If there's one or more undefined param, we can't use it
       if (constraint.params.filter((v) => v === undefined).length > 0) {
@@ -321,8 +324,12 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
           log.debug(`Final query: ${queryStr}; Params: ${JSON.stringify(params)}`);
           const { rows } = await this.db.query<ResourceTypeMap[T]["type"]>(queryStr, params);
 
-          if (thrw && rows.length === 0) {
-            throw new E.NotFound(`${t} not found for the given parameters`);
+          if (rows.length === 0) {
+            if (thrw) {
+              throw new E.NotFound(`${t} not found for the given parameters`);
+            } else {
+              return undefined;
+            }
           }
 
           // Warn if more than one found
@@ -485,14 +492,14 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
 
   public async update<T extends keyof ResourceTypeMap>(
     t: T,
-    _resource: Partial<ResourceTypeMap[T]["type"]> & { id: string },
+    pkVal: string | Buffer,
+    _resource: Partial<ResourceTypeMap[T]["type"]>,
     auth: Auth.ReqInfo,
     log: SimpleLoggerInterface
   ): Promise<ResourceTypeMap[T]["type"]> {
     const pk = <keyof ResourceTypeMap[T]["type"]>(this.primaryKeys[t] || "id");
-    const pkVal = _resource[pk];
-    const pkValStr = Buffer.isBuffer(pkVal) ? pkVal.toString("hex") : `${pkVal}`;
-    log.info(`Updating ${t} '${pkValStr}'`);
+    const pkValStr = Buffer.isBuffer(pkVal) ? this.bufferToUuid(pkVal) : `${pkVal}`;
+    log.info(`Updating ${t}:'${pkValStr}'`);
 
     const currentResource = await this.get(t, { [pk]: pkVal }, log, false);
     if (!currentResource) {
@@ -522,10 +529,10 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     currentResource?: ResourceTypeMap[T]["type"]
   ): Promise<ResourceTypeMap[T]["type"]> {
     const pk = <keyof ResourceTypeMap[T]["type"]>(this.primaryKeys[t] || "id");
-    log.info(`Saving resource '${t}${_resource[pk] ? `.${_resource[pk]}` : ""}`);
+    log.info(`Saving resource '${t}${_resource[pk] ? `:${_resource[pk]}` : ""}'`);
 
     if (!currentResource && _resource[pk]) {
-      currentResource = await this.get(t, { t: pk, v: _resource[pk] }, log, false);
+      currentResource = await this.get(t, { [pk]: _resource[pk] }, log, false);
     }
 
     let resource: ResourceTypeMap[T]["type"];
@@ -860,7 +867,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    * NOTE: Typescript makes it almost impossible to do things like this, so we're going to disable it
    * for this function
    */
-  protected buffersToHex<T, Except extends keyof T | undefined>(
+  public buffersToHex<T, Except extends keyof T | undefined>(
     _obj: T,
     params?: {
       notUuid?: true | Array<keyof T>;
@@ -893,7 +900,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    * NOTE: Typescript makes it almost impossible to do things like this, so we're going to disable it
    * for this function
    */
-  protected hexToBuffers<T extends { [k: string]: unknown }, Converted extends keyof T | undefined>(
+  public hexToBuffers<T extends { [k: string]: unknown }, Converted extends keyof T | undefined>(
     _obj: T
   ): Converted extends undefined ? T : { [K in keyof T]: K extends Converted ? Buffer : T[K] } {
     const obj: any = { ..._obj };
