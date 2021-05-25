@@ -275,7 +275,8 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       }
 
       // Apply pagination and sort
-      query = this.mergeQuery(query, this.processCollectionParams(t, collectionParams));
+      const paramData = this.processCollectionParams(t, collectionParams);
+      query = this.mergeQuery(query, paramData.query);
 
       // Compose query
       const { queryStr, params } = this.composeSql(query);
@@ -284,11 +285,21 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       log.debug(`Final query: ${queryStr}; Params: ${JSON.stringify(params)}`);
       const { rows } = await this.db.query<ResourceTypeMap[T]["type"]>(queryStr, params);
       log.debug(`Returning ${rows.length} ${t}`);
-      if (this.convertBuffersAndHex) {
-        return rows.map((r) => this.buffersToHex(r));
-      } else {
-        return rows;
-      }
+
+      const data: Array<ResourceTypeMap[T]["type"]> = this.convertBuffersAndHex
+        ? rows.map((r) => this.buffersToHex(r))
+        : rows;
+
+      return {
+        t: "collection",
+        data,
+        meta: {
+          pg: {
+            ...paramData.meta,
+            nextCursor: data.length < paramData.meta.size ? null : paramData.meta.nextCursor,
+          },
+        },
+      };
     } else {
       const constraint = this.processConstraint(t, _constraint);
 
@@ -390,16 +401,18 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   protected processCollectionParams<T extends keyof ResourceTypeMap>(
     t: T,
     params: undefined | Api.CollectionParams
-  ): Partial<Query> {
+  ): { meta: Api.NextPageParams; query: Partial<Query> } {
     const query: Partial<Query> = {};
 
-    // Pagination
     const pg = params?.__pg;
-    if (pg) {
-      let num = 1;
-      const size = pg.size || this.defaultPageSize;
+    const sort = params?.__sort?.trim();
 
-      const _cursor = pg.cursor;
+    let num = 1;
+    const size = pg?.size || this.defaultPageSize;
+    const _cursor = pg?.cursor || null;
+
+    // Pagination
+    if (pg) {
       if (_cursor) {
         const cursor = Buffer.from(_cursor, "base64").toString("utf8");
         const match = cursor.match(/^num:([1-9][0-9]*)$/);
@@ -416,9 +429,9 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       // Default to first page and ${defaultPageSize} results
       query.limit = `0, ${this.defaultPageSize}`;
     }
+    const nextCursor = Buffer.from(`num:${num + 1}`, "utf8").toString("base64");
 
     // Sort
-    const sort = params?.__sort?.trim();
     if (sort) {
       query.sort = this.parseSort(t, sort).map(
         (s) => `\`${this.sanitizeFieldName(s[0])}\` ${s[1]}`
@@ -426,7 +439,15 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     }
 
     // Return
-    return query;
+    return {
+      query,
+      meta: {
+        size,
+        sort,
+        prevCursor: _cursor,
+        nextCursor,
+      },
+    };
   }
 
   /**
@@ -826,6 +847,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
 
     const thrw = typeof others[1] === "boolean" ? others[1] : false;
 
+    // If neither of the other two parameters were passed, then just return what we've got
     if (
       (typeof others[0] === "undefined" || others[0] === null) &&
       (typeof others[1] === "undefined" || others[1] === null)
@@ -839,12 +861,13 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       };
     }
 
-    const filter = others[0];
-    if (this.isFilter<T>(filter)) {
+    // Now, others[0] could be CollectionParams, filters or constraints
+    const filterOrConstraintOrParams = others[0];
+    if (this.isFilter<T>(filterOrConstraintOrParams)) {
       return {
         log,
         thrw,
-        filter,
+        filter: filterOrConstraintOrParams,
         collectionParams: <Api.CollectionParams | undefined>(others[1] || undefined),
         constraint: undefined,
       };
@@ -936,7 +959,9 @@ const isLog = (thing: any): thing is SimpleLoggerInterface => {
   return thing && thing.debug && thing.info && thing.notice && thing.error;
 };
 const isCollectionParams = (thing: any): thing is Api.CollectionParams => {
-  return thing && (thing.__pg || thing.__sort);
+  const pg = thing?.__pg;
+  const sort = thing?.__sort;
+  return thing && (Object.keys(thing).length === 0 || pg !== undefined || sort !== undefined);
 };
 
 const sortDir: { [k: string]: "ASC" | "DESC" } = {

@@ -1,6 +1,6 @@
 {
   "name": "@wymp/sql",
-  "version": "1.0.0-beta7",
+  "version": "1.0.0-beta8",
   "description": "A small typescript package providing generalized and customizable sql database access",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,10 +28,9 @@
   "homepage": "https://github.com/wymp/ts-sql#readme",
   "dependencies": {
     "@kael-shipman/uuid-with-v6": "^2.0.0",
-    "@wymp/http-errors": "^1.7.0",
+    "@wymp/http-errors": "^1.8.0",
     "@wymp/ts-simple-interfaces": "^0.5.2",
-    "@wymp/types": "^0.1.0-rc3",
-    "uuid-with-v6": "^1.1.2"
+    "@wymp/types": "0.1.0-rc4"
   },
   "devDependencies": {
     "@types/jest": "^26.0.23",
