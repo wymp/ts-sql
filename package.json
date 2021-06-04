@@ -1,6 +1,6 @@
 {
   "name": "@wymp/sql",
-  "version": "1.0.0-beta8",
+  "version": "1.0.0-beta9",
   "description": "A small typescript package providing generalized and customizable sql database access",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

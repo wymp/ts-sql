@@ -228,8 +228,8 @@ export const generateAndOutputTypes = async (clean: FinalizeFunc) => {
     for (const field of fields) {
       const info = <TableInfo>field.split(/[\s]+/);
 
-      if (info[0] === "id") {
-        // Treat ids specially
+      if (info[0] === "id" || info[0] === "type") {
+        // Treat ids and types specially
         apiEntry.fields.id = {
           t: "id",
           rawType: info[1],

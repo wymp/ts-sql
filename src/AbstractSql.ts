@@ -942,6 +942,13 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   public hexToBuffer(hex: string): Buffer {
     return hexToBuffer(hex);
   }
+
+  public uuid(t: "string"): string;
+  public uuid(t?: "buffer"): Buffer;
+  public uuid(t?: "buffer" | "string"): Buffer | string {
+    const id = uuid();
+    return t && t === "string" ? id : this.hexToBuffer(id);
+  }
 }
 
 const bufferToUuid = (buf: Buffer): string => {
