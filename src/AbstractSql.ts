@@ -93,23 +93,23 @@ export interface SqlInterface<ResourceTypeMap extends GenericTypeMap> {
   get<T extends keyof ResourceTypeMap>(
     t: T,
     log: SimpleLoggerInterface
-  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"], any, { pg: Api.NextPageParams }>>;
   get<T extends keyof ResourceTypeMap>(
     t: T,
     params: Api.CollectionParams | undefined | null,
     log: SimpleLoggerInterface
-  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"], any, { pg: Api.NextPageParams }>>;
   get<T extends keyof ResourceTypeMap>(
     t: T,
     filter: ResourceTypeMap[T]["filters"] | undefined | null,
     log: SimpleLoggerInterface
-  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"], any, { pg: Api.NextPageParams }>>;
   get<T extends keyof ResourceTypeMap>(
     t: T,
     filter: ResourceTypeMap[T]["filters"] | undefined | null,
     params: Api.CollectionParams | undefined | null,
     log: SimpleLoggerInterface
-  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"], any, { pg: Api.NextPageParams }>>;
   get<T extends keyof ResourceTypeMap>(
     t: T,
     constraint: ResourceTypeMap[T]["constraints"],
@@ -203,23 +203,23 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   public async get<T extends keyof ResourceTypeMap>(
     t: T,
     log: SimpleLoggerInterface
-  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"], any, { pg: Api.NextPageParams }>>;
   public async get<T extends keyof ResourceTypeMap>(
     t: T,
     params: Api.CollectionParams | undefined | null,
     log: SimpleLoggerInterface
-  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"], any, { pg: Api.NextPageParams }>>;
   public async get<T extends keyof ResourceTypeMap>(
     t: T,
     filter: ResourceTypeMap[T]["filters"] | undefined | null,
     log: SimpleLoggerInterface
-  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"], any, { pg: Api.NextPageParams }>>;
   public async get<T extends keyof ResourceTypeMap>(
     t: T,
     filter: ResourceTypeMap[T]["filters"] | undefined | null,
     params: Api.CollectionParams | undefined | null,
     log: SimpleLoggerInterface
-  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"]>>;
+  ): Promise<Api.CollectionResponse<ResourceTypeMap[T]["type"], any, { pg: Api.NextPageParams }>>;
   public async get<T extends keyof ResourceTypeMap>(
     t: T,
     constraint: ResourceTypeMap[T]["constraints"],
@@ -244,7 +244,9 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     logOrParams?: SimpleLoggerInterface | Api.CollectionParams | undefined | null,
     logOrThrw?: boolean | undefined | SimpleLoggerInterface
   ): Promise<
-    Api.CollectionResponse<ResourceTypeMap[T]["type"]> | ResourceTypeMap[T]["type"] | undefined
+    | Api.CollectionResponse<ResourceTypeMap[T]["type"], any, { pg: Api.NextPageParams }>
+    | ResourceTypeMap[T]["type"]
+    | undefined
   > {
     const {
       log,
