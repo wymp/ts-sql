@@ -1,0 +1,179 @@
+<!doctype html>
+<html class="default no-js">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>@wymp/sql</title>
+	<meta name="description" content="Documentation for @wymp/sql">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="assets/css/main.css">
+	<script async src="assets/js/search.js" id="search-script"></script>
+</head>
+<body>
+<header>
+	<div class="tsd-page-toolbar">
+		<div class="container">
+			<div class="table-wrap">
+				<div class="table-cell" id="tsd-search" data-index="assets/js/search.json" data-base=".">
+					<div class="field">
+						<label for="tsd-search-field" class="tsd-widget search no-caption">Search</label>
+						<input id="tsd-search-field" type="text" />
+					</div>
+					<ul class="results">
+						<li class="state loading">Preparing search index...</li>
+						<li class="state failure">The search index is not available</li>
+					</ul>
+					<a href="index.html" class="title">@wymp/sql</a>
+				</div>
+				<div class="table-cell" id="tsd-widgets">
+					<div id="tsd-filter">
+						<a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a>
+						<div class="tsd-filter-group">
+							<div class="tsd-select" id="tsd-filter-visibility">
+								<span class="tsd-select-label">All</span>
+								<ul class="tsd-select-list">
+									<li data-value="public">Public</li>
+									<li data-value="protected">Public/Protected</li>
+									<li data-value="private" class="selected">All</li>
+								</ul>
+							</div>
+							<input type="checkbox" id="tsd-filter-inherited" checked />
+							<label class="tsd-widget" for="tsd-filter-inherited">Inherited</label>
+							<input type="checkbox" id="tsd-filter-externals" checked />
+							<label class="tsd-widget" for="tsd-filter-externals">Externals</label>
+						</div>
+					</div>
+					<a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="tsd-page-title">
+		<div class="container">
+			<h1>@wymp/sql</h1>
+		</div>
+	</div>
+</header>
+<div class="container container-main">
+	<div class="row">
+		<div class="col-8 col-content">
+			<div class="tsd-panel tsd-typography">
+				<a href="#wymp-sql" id="wymp-sql" style="color: inherit; text-decoration: none;">
+					<h1>Wymp SQL</h1>
+				</a>
+				<p>This is a very experimental attempt at a fully generalized, customizable Typescript database
+					abstraction. While we made an intentional choice to move away from fully declarative method names
+					in favor of more generlized methods, in effect, they remain fairly specific, since you can&#39;t call
+				the methods without some fairly specific typing.</p>
+				<p>The central concept in this library is the &quot;TypeMap&quot;. This is a type that you define that links
+					together string type-tags with actual database types, possible filters, possible constraints, and
+				possible default values for fields.</p>
+				<p>The best example of this can be found in the <code>tests</code> folder, specifically the
+					<a href="tests/Types.ts"><code>tests/Types.ts</code> file</a>. This file demonstrates the construction of a simple domain.
+					In reality, you would probably separate types from actual values (like <code>UserDefaults</code>, etc.), but in
+				this case, we&#39;ve just lumped them all together for ease of use.</p>
+				<p>As you can see from that example, you have the option of defining constraints (for getting single
+					resources) and filters (for getting collections) on a per-resource basis. You can also define
+					default values (either hard-coded or function-based) for each resource type, allowing you to call
+					<code>save</code> for a new resource without having to provide fields for which reasonable defaults can be
+				found.</p>
+				<a href="#to-do" id="to-do" style="color: inherit; text-decoration: none;">
+					<h2>To-Do</h2>
+				</a>
+				<ol>
+					<li>Document <code>TypeGen</code> module</li>
+					<li>Complete <code>SqlInterface</code> interface</li>
+					<li>Provide more examples of how to use this library</li>
+				</ol>
+			</div>
+		</div>
+		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
+			<nav class="tsd-navigation primary">
+				<ul>
+					<li class=" ">
+						<a href="modules.html">Exports</a>
+					</li>
+					<li class=" tsd-kind-namespace">
+						<a href="modules/typegen.html">Type<wbr>Gen</a>
+					</li>
+				</ul>
+			</nav>
+			<nav class="tsd-navigation secondary menu-sticky">
+				<ul class="before-current">
+					<li class=" tsd-kind-class tsd-has-type-parameter">
+						<a href="classes/abstractsql.html" class="tsd-kind-icon">Abstract<wbr>Sql</a>
+					</li>
+					<li class=" tsd-kind-interface">
+						<a href="interfaces/cacheinterface.html" class="tsd-kind-icon">Cache<wbr>Interface</a>
+					</li>
+					<li class=" tsd-kind-interface tsd-has-type-parameter">
+						<a href="interfaces/sqlinterface.html" class="tsd-kind-icon">Sql<wbr>Interface</a>
+					</li>
+					<li class=" tsd-kind-interface tsd-is-external">
+						<a href="interfaces/uuid.html" class="tsd-kind-icon">uuid</a>
+					</li>
+					<li class=" tsd-kind-type-alias">
+						<a href="modules.html#defaultval" class="tsd-kind-icon">Default<wbr>Val</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="modules.html#filter" class="tsd-kind-icon">Filter</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="modules.html#generictypemap" class="tsd-kind-icon">Generic<wbr>Type<wbr>Map</a>
+					</li>
+					<li class=" tsd-kind-type-alias">
+						<a href="modules.html#idconstraint" class="tsd-kind-icon">Id<wbr>Constraint</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="modules.html#nodefaults" class="tsd-kind-icon">No<wbr>Defaults</a>
+					</li>
+					<li class=" tsd-kind-type-alias">
+						<a href="modules.html#nullfilter" class="tsd-kind-icon">Null<wbr>Filter</a>
+					</li>
+					<li class=" tsd-kind-type-alias">
+						<a href="modules.html#query" class="tsd-kind-icon">Query</a>
+					</li>
+					<li class=" tsd-kind-type-alias">
+						<a href="modules.html#sqlobj" class="tsd-kind-icon">Sql<wbr>Obj</a>
+					</li>
+					<li class=" tsd-kind-variable">
+						<a href="modules.html#buffid" class="tsd-kind-icon">buff<wbr>Id</a>
+					</li>
+					<li class=" tsd-kind-variable">
+						<a href="modules.html#strid" class="tsd-kind-icon">str<wbr>Id</a>
+					</li>
+					<li class=" tsd-kind-function tsd-has-type-parameter">
+						<a href="modules.html#both" class="tsd-kind-icon">both</a>
+					</li>
+					<li class=" tsd-kind-function tsd-is-external">
+						<a href="modules.html#uuid" class="tsd-kind-icon">uuid</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+</div>
+<footer class="with-border-bottom">
+	<div class="container">
+		<h2>Legend</h2>
+		<div class="tsd-legend-group">
+			<ul class="tsd-legend">
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected method</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-method tsd-parent-kind-interface"><span class="tsd-kind-icon">Method</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-method tsd-parent-kind-class"><span class="tsd-kind-icon">Method</span></li>
+			</ul>
+		</div>
+	</div>
+</footer>
+<div class="container tsd-generator">
+	<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p>
+</div>
+<div class="overlay"></div>
+<script src="assets/js/main.js"></script>
+</body>
+</html>

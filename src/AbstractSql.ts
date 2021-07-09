@@ -8,17 +8,35 @@ import {
 import * as E from "@wymp/http-errors";
 import { Api, Auth, Audit, PartialSelect } from "@wymp/types";
 
+/** A re-export of the uuid/v6 function from @kael-shipman/uuid-with-v6 */
 export { uuid };
 
+/**
+ * An interface defining a cache access object. This may be a redis cache, a simple in-memory
+ * cache, or something else.
+ */
 export interface CacheInterface {
+  /** Get a value from the cache, using the given function if the key is not set */
   get<T>(k: string, cb: () => Promise<T>, ttl?: number, log?: SimpleLoggerInterface): Promise<T>;
   get<T>(k: string, cb: () => T, ttl?: number, log?: SimpleLoggerInterface): T;
+
+  /**
+   * Clear one or more values from the cache. If `k` is a string, then it will clear _only_ that
+   * key, if set. If `k` is a RegExp, it will clear any keys that match the RegExp.
+   */
   clear(k: string | RegExp): void | unknown;
 }
 
+/**
+ * An object that can be retrieved from or saved to a SQL database. Note that this is intended to
+ * exclude complex values like class instances, etc.
+ */
 export type SqlObj = { [k: string]: SqlPrimitive };
 
 /**
+ * This is the defining type of this library. It is a type that you will define that establishes
+ * the parameters of your data domain.
+ *
  * This is a type that you would define within your own domain. It specifies a string type
  * identifier (`t`), together with the database type for that object. The string type identifier
  * should match the `type` parameter of the API type for the same object.
@@ -30,6 +48,7 @@ export type SqlObj = { [k: string]: SqlPrimitive };
  *
  * In your domain, this would look something like the following:
  *
+ * ```
  * export type TypeMap = {
  *   users: {
  *     type: MyDomain.Db.User;
@@ -60,6 +79,7 @@ export type SqlObj = { [k: string]: SqlPrimitive };
  * export const EventDefaults = {
  *   createdMs: () => Date.now(),
  * }
+ * ```
  */
 export type GenericTypeMap<T extends SqlObj = {}> = {
   [t: string]: {
@@ -70,24 +90,66 @@ export type GenericTypeMap<T extends SqlObj = {}> = {
   };
 };
 
+/** Convenience type defining a constraint on a standard `id` field */
 export type IdConstraint = { id: string | number | Buffer | undefined | null };
+
+/** Convenience type defining a filter with no possible values */
 export type NullFilter = { _t: "filter" };
+
+/**
+ * Convenience type that can be used to indicate that there are no defaults for the given class.
+ *
+ * Note: This type is a bit of a misnomer. It will generally not be used in practice, but is here
+ * to allow us to define sensible types for our abstract class.
+ * */
 export type NoDefaults<T extends SqlObj> = { [k in keyof T]?: DefaultVal };
+
+/** The type of a value that may be passed as a default. */
 export type DefaultVal = SqlPrimitive | (() => SqlPrimitive);
-export type Defaults<ResourceTypeMap extends GenericTypeMap> = {
+
+/** A technical, internal type that is used to make our Abstract class work. */
+type Defaults<ResourceTypeMap extends GenericTypeMap> = {
   [T in keyof ResourceTypeMap]: ResourceTypeMap[T]["defaults"];
 };
 
-// Helper for easily making filter types
+/** Helper for easily making filter types */
 export type Filter<T> = { _t: "filter" } & { [K in keyof T]: undefined | null | T[K] };
 
-// Helpers for defaults
+/** Helper for setting an `id` default field to generate a buffer id */
 export const buffId = { id: () => hexToBuffer(uuid()) };
+
+/** Helper for setting an `id` default field to generate a string id */
 export const strId = { id: () => uuid() };
+
+/**
+ * Helper for combining several default specifiers. This will typically be used in conjunction with
+ * one of the above id helpers like so:
+ *
+ * ```
+ * const defaults = {
+ *   "my-type": both(buffId, { createdMs: () => Date.now() })
+ * }
+ * ```
+ *
+ * This results in the type
+ *
+ * ```
+ * {
+ *   "my-type": {
+ *     id: () => Buffer;
+ *     createdMs: () => number;
+ *   }
+ * }
+ * ```
+ */
 export const both = <A, B>(a: A, b: B) => ({ ...a, ...b });
 
 /**
- * An interface without all the internal methods of the class
+ * An interface without all the internal methods of the class.
+ *
+ * Since typescript (disappointingly) includes protected/private methods and properites when using
+ * a class as an interface, we define this "lightweight" interface for use in function parameter
+ * definitions, so as to narrow the interface to only public methods.
  */
 export interface SqlInterface<ResourceTypeMap extends GenericTypeMap> {
   get<T extends keyof ResourceTypeMap>(
@@ -128,6 +190,8 @@ export interface SqlInterface<ResourceTypeMap extends GenericTypeMap> {
  * A very simple, not very powerful SQL Query object. Note that the keyword for each of these
  * sections will be provided, so the value for `limit`, for example, would be something like
  * `20,10`, rather than `LIMIT 20,10`.
+ *
+ * This is exported mainly so you can more easily define the override of certain methods.
  */
 export type Query = {
   select: Array<string>;
@@ -140,36 +204,77 @@ export type Query = {
 };
 
 /**
- * This class abstracts all io access into generalized or specific declarative method calls
+ * ## AbstractSql
+ *
+ * Extend this abstract class to create a final sql data access class that is highly constrained to
+ * your defined type ecosystem. This class attempts to make it trivial to get, save and delete
+ * well-typed SQL objects.
+ *
+ * **NOTE: This is not intended to be purely type-safe!!** There are certain things that just aren't
+ * that feasible, and so there is still the possibility of runtime exceptions if you're not careful.
+ * In particular:
+ *
+ * * Filters are assumed to be column names by default, but do not have to be. For example, you can
+ *   define a filter as `{ idIn: Array<string> }` and the class will happily write sql like
+ *   `SELECT ... WHERE idIn in (?)`. You need to override the `getSqlForFilterField` to change this
+ *   behavior.
  */
 export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   implements SqlInterface<ResourceTypeMap>
 {
+  /** The actual sql db connection */
   protected db: SimpleSqlDbInterface;
+
+  /**
+   * A cache object. Note that this can be a fake or "pass-through" cache if cache functionality is
+   * not desired.
+   */
   protected cache: CacheInterface;
+
+  /**
+   * Whether to automatically convert buffers of length 16 to UUIDs and UUIDs to buffers (on save).
+   * This setting can be somewhat problematic.
+   */
   protected convertBuffersAndHex: boolean = true;
 
   /**
    * Define a map for types to table names. Any types that are not found in this map are assumed
-   * to be synonymous with their tables.
+   * to be the actual name of their tables. (e.g., type `users` is assumed to be the `users` table)
+   *
+   * You will probably override this with your actual table map (if necessary) when you extend this
+   * class.
    */
   protected tableMap: { [k in keyof ResourceTypeMap]?: string } = {};
 
   /**
-   * Define default values for fields of various types
+   * Define default values for fields of various types. You should override this with your actual
+   * defaults when you extend this class.
    */
   protected defaults: Defaults<ResourceTypeMap>;
 
   /**
-   * Define wich fields are relationships for any given type. This determines how change set are
-   * created and published.
+   * Define wich fields are relationships for any given type. The string value indicated for each
+   * field should be the type that objects of this relationship have.
+   *
+   * This determines how change sets are created and published for auditing purposes.
+   *
+   * For example, if users have a "bestFriend" relationship, then:
+   *
+   * ```
+   * protected resourceRelationships: {
+   *   "users": {
+   *     "bestFriend": "users"
+   *   }
+   * }
+   * ```
    */
   protected resourceRelationships: {
     [k in keyof ResourceTypeMap]?: { [field: string]: string };
   } = {};
 
   /**
-   * If any tables have alternate PKs, define them here (default is `id`)
+   * If any tables have alternate PKs, define them here (default is `id`). (At this time, this does
+   * not support compound keys.)
    */
   protected primaryKeys: { [K in keyof ResourceTypeMap]?: keyof ResourceTypeMap[K]["type"] } = {};
 
@@ -179,7 +284,8 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   protected defaultPageSize = 25;
 
   /**
-   * (Optional) Auditor client. This allows you to flow data changes into an auditing system.
+   * (Optional) Auditor client. If you set this to an auditor client that is connected to a message
+   * queue, this allows you to flow data mutations into an auditing system.
    */
   protected audit: Audit.ClientInterface | null = null;
 
@@ -199,6 +305,9 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    *
    * Filters and constraints are passed down to lower-level processing functions which can be
    * overridden in derivative classes.
+   *
+   * For getting a single resource using a constraint, you can additionally define whether you want
+   * the system to throw a 404 error if no result is returned.
    */
   public async get<T extends keyof ResourceTypeMap>(
     t: T,
@@ -362,7 +471,11 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   }
 
   /**
-   * Default method. This should be overridden for domain-specific filters.
+   * Default method for translating filter fields into SQL. This should be overridden for
+   * domain-specific filters. For example, if you want to be able to get collections of users
+   * filtered by name, you might have a filter like `{ _t: "filter", nameLike: string }`. You
+   * would then override this method and handle the `nameLike` field for objects of type `users`,
+   * calling back to this default implementation for any other field.
    */
   protected getSqlForFilterField<T extends keyof ResourceTypeMap>(
     t: T,
@@ -456,7 +569,8 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    * Parse a sort string
    *
    * This is a generic method that can be overridden by descendent classes to provide validation
-   * for sort fields.
+   * for sort fields. By default, all it will do is parse the fields out. It will not actually
+   * validate that the given fields exist on the given object.
    */
   protected parseSort<T extends keyof ResourceTypeMap>(
     t: T,
@@ -490,7 +604,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   }
 
   /**
-   * Compose a final query from the given query object
+   * Compose a final SQL query from the given query object
    */
   protected composeSql(q: Query): { queryStr: string; params: Array<SqlValue> | undefined } {
     return {
@@ -513,6 +627,12 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     return f._t === "filter";
   }
 
+  /**
+   * Save changes of the given resource to the database, throwing a 404 error if no object is found
+   * for the given primary key. This method expects the resource to exist in the database. It then
+   * retrieves it and diffs the incoming object against that pulled from the database. It saves any
+   * changes using the `save` method. This additionally emits data mutation events.
+   */
   public async update<T extends keyof ResourceTypeMap>(
     t: T,
     pkVal: string | Buffer,
@@ -544,6 +664,11 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     return await this.save(t, resource, auth, log, currentResource);
   }
 
+  /**
+   * Save the given object. If an object already exists for this object's primary key, then incoming
+   * values are diffed against this existing object and the record is updated. Otherwise, the
+   * record is saved as a new object, using any defaults specified to fill in default fields.
+   */
   public async save<T extends keyof ResourceTypeMap>(
     t: T,
     _resource: PartialSelect<ResourceTypeMap[T]["type"], keyof ResourceTypeMap[T]["defaults"]>,
@@ -703,6 +828,9 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     return resource;
   }
 
+  /**
+   * Delete the given resource
+   */
   public async delete<T extends keyof ResourceTypeMap>(
     t: T,
     resource: ResourceTypeMap[T]["type"],
@@ -773,6 +901,9 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     }
   }
 
+  /**
+   * Gets an object with concrete values to use as defaults for the given resource
+   */
   protected getDefaults<T extends keyof ResourceTypeMap>(
     t: T
   ): { [K in keyof Defaults<ResourceTypeMap>[T]]: T[K] } {
@@ -784,6 +915,9 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     return defaults;
   }
 
+  /**
+   * Takes two Query objects and merges them together into one
+   */
   protected mergeQuery(base: Query, add: Partial<Query>): Query {
     const result: Query = {
       select: [...base.select, ...(add.select || [])],
@@ -807,6 +941,10 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     return result;
   }
 
+  /**
+   * An internal method for untangling parameters for the `get` method. The `get` method has so
+   * many possible signatures that it was far too complicated to this within the method itself.
+   */
   protected assignParams<T extends keyof ResourceTypeMap>(
     opts: [
       (
@@ -886,11 +1024,13 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   }
 
   /**
-   * This function finds all buffers and converts them to hex. If the "uuids" param is true or
-   * undefined and the buffer is 16 bytes, the resulting string is formatted as a uuid.
+   * This function finds all buffers and converts them to hex strings. If the given value is 16 bits
+   * long, is not in the `params.notUuids` array, or `params.notUuids` is undefined, the resulting
+   * string is formatted as a uuid.
    *
    * NOTE: Typescript makes it almost impossible to do things like this, so we're going to disable it
-   * for this function
+   * for this function. This makes this operation wholly un-typesafe, but this functionality is so
+   * convenient that we deem it worthwhile.
    */
   public buffersToHex<T, Except extends keyof T | undefined>(
     _obj: T,
@@ -918,12 +1058,15 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   }
 
   /**
+   * This function takes any string that looks like a hex string and converts it to a buffer.
+   *
    * Unfortunately, there's no way to easily figure out _which_ keys will be converted, since we're
    * doing some actual string analysis here. Need to come back to this.
    * TODO: Create better typing parameters for hexToBuffers
    *
    * NOTE: Typescript makes it almost impossible to do things like this, so we're going to disable it
-   * for this function
+   * for this function. This makes this operation wholly un-typesafe, but this functionality is so
+   * convenient that we deem it worthwhile.
    */
   public hexToBuffers<T extends { [k: string]: unknown }, Converted extends keyof T | undefined>(
     _obj: T
@@ -937,14 +1080,25 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     return obj;
   }
 
+  /**
+   * Convenience function for converting a buffer to a formatted uuid. Note that no actual
+   * validation is performed. If the given string is more than 16 bits, you'll get a uuid plus
+   * whatever extra there was.
+   */
   public bufferToUuid(buf: Buffer): string {
     return bufferToUuid(buf);
   }
 
+  /**
+   * Converts a hex string with possible dashes to a buffer
+   */
   public hexToBuffer(hex: string): Buffer {
     return hexToBuffer(hex);
   }
 
+  /**
+   * Convenience export of the uuid function, optionally converting to buffer
+   */
   public uuid(t: "string"): string;
   public uuid(t?: "buffer"): Buffer;
   public uuid(t?: "buffer" | "string"): Buffer | string {

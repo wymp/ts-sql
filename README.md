@@ -23,5 +23,7 @@ found.
 
 ## To-Do
 
-1. Implement `save`, `updated` and `delete`.
+1. Document `TypeGen` module
+2. Complete `SqlInterface` interface
+3. Provide more examples of how to use this library
 

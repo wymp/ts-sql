@@ -1,0 +1,388 @@
+<!doctype html>
+<html class="default no-js">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>SqlInterface | @wymp/sql</title>
+	<meta name="description" content="Documentation for @wymp/sql">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="../assets/css/main.css">
+	<script async src="../assets/js/search.js" id="search-script"></script>
+</head>
+<body>
+<header>
+	<div class="tsd-page-toolbar">
+		<div class="container">
+			<div class="table-wrap">
+				<div class="table-cell" id="tsd-search" data-index="../assets/js/search.json" data-base="..">
+					<div class="field">
+						<label for="tsd-search-field" class="tsd-widget search no-caption">Search</label>
+						<input id="tsd-search-field" type="text" />
+					</div>
+					<ul class="results">
+						<li class="state loading">Preparing search index...</li>
+						<li class="state failure">The search index is not available</li>
+					</ul>
+					<a href="../index.html" class="title">@wymp/sql</a>
+				</div>
+				<div class="table-cell" id="tsd-widgets">
+					<div id="tsd-filter">
+						<a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a>
+						<div class="tsd-filter-group">
+							<div class="tsd-select" id="tsd-filter-visibility">
+								<span class="tsd-select-label">All</span>
+								<ul class="tsd-select-list">
+									<li data-value="public">Public</li>
+									<li data-value="protected">Public/Protected</li>
+									<li data-value="private" class="selected">All</li>
+								</ul>
+							</div>
+							<input type="checkbox" id="tsd-filter-inherited" checked />
+							<label class="tsd-widget" for="tsd-filter-inherited">Inherited</label>
+							<input type="checkbox" id="tsd-filter-externals" checked />
+							<label class="tsd-widget" for="tsd-filter-externals">Externals</label>
+						</div>
+					</div>
+					<a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="tsd-page-title">
+		<div class="container">
+			<ul class="tsd-breadcrumb">
+				<li>
+					<a href="../modules.html">@wymp/sql</a>
+				</li>
+				<li>
+					<a href="sqlinterface.html">SqlInterface</a>
+				</li>
+			</ul>
+			<h1>Interface SqlInterface&lt;ResourceTypeMap&gt;</h1>
+		</div>
+	</div>
+</header>
+<div class="container container-main">
+	<div class="row">
+		<div class="col-8 col-content">
+			<section class="tsd-panel tsd-comment">
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>An interface without all the internal methods of the class.</p>
+					</div>
+					<p>Since typescript (disappointingly) includes protected/private methods and properites when using
+						a class as an interface, we define this &quot;lightweight&quot; interface for use in function parameter
+					definitions, so as to narrow the interface to only public methods.</p>
+				</div>
+			</section>
+			<section class="tsd-panel tsd-type-parameters">
+				<h3>Type parameters</h3>
+				<ul class="tsd-type-parameters">
+					<li>
+						<h4>ResourceTypeMap<span class="tsd-signature-symbol">: </span><a href="../modules.html#generictypemap" class="tsd-signature-type" data-tsd-kind="Type alias">GenericTypeMap</a></h4>
+					</li>
+				</ul>
+			</section>
+			<section class="tsd-panel tsd-hierarchy">
+				<h3>Hierarchy</h3>
+				<ul class="tsd-hierarchy">
+					<li>
+						<span class="target">SqlInterface</span>
+					</li>
+				</ul>
+			</section>
+			<section class="tsd-panel">
+				<h3>Implemented by</h3>
+				<ul class="tsd-hierarchy">
+					<li><a href="../classes/abstractsql.html" class="tsd-signature-type" data-tsd-kind="Class">AbstractSql</a></li>
+				</ul>
+			</section>
+			<section class="tsd-panel-group tsd-index-group">
+				<h2>Index</h2>
+				<section class="tsd-panel tsd-index-panel">
+					<div class="tsd-index-content">
+						<section class="tsd-index-section ">
+							<h3>Methods</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-method tsd-parent-kind-interface tsd-has-type-parameter"><a href="sqlinterface.html#get" class="tsd-kind-icon">get</a></li>
+							</ul>
+						</section>
+					</div>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Methods</h2>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-interface tsd-has-type-parameter">
+					<a name="get" class="tsd-anchor"></a>
+					<h3>get</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-has-type-parameter">
+						<li class="tsd-signature tsd-kind-icon">get&lt;T&gt;<span class="tsd-signature-symbol">(</span>t<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">T</span>, log<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">SimpleLoggerInterface</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">CollectionResponse</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">{ </span>pg<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">NextPageParams</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">get&lt;T&gt;<span class="tsd-signature-symbol">(</span>t<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">T</span>, params<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">CollectionParams</span>, log<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">SimpleLoggerInterface</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">CollectionResponse</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">{ </span>pg<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">NextPageParams</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">get&lt;T&gt;<span class="tsd-signature-symbol">(</span>t<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">T</span>, filter<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;filters&quot;</span><span class="tsd-signature-symbol">]</span>, log<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">SimpleLoggerInterface</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">CollectionResponse</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">{ </span>pg<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">NextPageParams</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">get&lt;T&gt;<span class="tsd-signature-symbol">(</span>t<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">T</span>, filter<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;filters&quot;</span><span class="tsd-signature-symbol">]</span>, params<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">CollectionParams</span>, log<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">SimpleLoggerInterface</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">CollectionResponse</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">{ </span>pg<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">NextPageParams</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">get&lt;T&gt;<span class="tsd-signature-symbol">(</span>t<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">T</span>, constraint<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;constraints&quot;</span><span class="tsd-signature-symbol">]</span>, log<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">SimpleLoggerInterface</span>, thrw<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">true</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">get&lt;T&gt;<span class="tsd-signature-symbol">(</span>t<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">T</span>, constraint<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;constraints&quot;</span><span class="tsd-signature-symbol">]</span>, log<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">SimpleLoggerInterface</span>, thrw<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/wymp/ts-sql/blob/d3a48f7/src/AbstractSql.ts#L155">src/AbstractSql.ts:155</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-type-parameters-title">Type parameters</h4>
+							<ul class="tsd-type-parameters">
+								<li>
+									<h4>T<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h4>
+								</li>
+							</ul>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>t: <span class="tsd-signature-type">T</span></h5>
+								</li>
+								<li>
+									<h5>log: <span class="tsd-signature-type">SimpleLoggerInterface</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">CollectionResponse</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">{ </span>pg<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">NextPageParams</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/wymp/ts-sql/blob/d3a48f7/src/AbstractSql.ts#L159">src/AbstractSql.ts:159</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-type-parameters-title">Type parameters</h4>
+							<ul class="tsd-type-parameters">
+								<li>
+									<h4>T<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h4>
+								</li>
+							</ul>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>t: <span class="tsd-signature-type">T</span></h5>
+								</li>
+								<li>
+									<h5>params: <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">CollectionParams</span></h5>
+								</li>
+								<li>
+									<h5>log: <span class="tsd-signature-type">SimpleLoggerInterface</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">CollectionResponse</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">{ </span>pg<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">NextPageParams</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/wymp/ts-sql/blob/d3a48f7/src/AbstractSql.ts#L164">src/AbstractSql.ts:164</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-type-parameters-title">Type parameters</h4>
+							<ul class="tsd-type-parameters">
+								<li>
+									<h4>T<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h4>
+								</li>
+							</ul>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>t: <span class="tsd-signature-type">T</span></h5>
+								</li>
+								<li>
+									<h5>filter: <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;filters&quot;</span><span class="tsd-signature-symbol">]</span></h5>
+								</li>
+								<li>
+									<h5>log: <span class="tsd-signature-type">SimpleLoggerInterface</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">CollectionResponse</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">{ </span>pg<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">NextPageParams</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/wymp/ts-sql/blob/d3a48f7/src/AbstractSql.ts#L169">src/AbstractSql.ts:169</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-type-parameters-title">Type parameters</h4>
+							<ul class="tsd-type-parameters">
+								<li>
+									<h4>T<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h4>
+								</li>
+							</ul>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>t: <span class="tsd-signature-type">T</span></h5>
+								</li>
+								<li>
+									<h5>filter: <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;filters&quot;</span><span class="tsd-signature-symbol">]</span></h5>
+								</li>
+								<li>
+									<h5>params: <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">null</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">CollectionParams</span></h5>
+								</li>
+								<li>
+									<h5>log: <span class="tsd-signature-type">SimpleLoggerInterface</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">CollectionResponse</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">{ </span>pg<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">NextPageParams</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/wymp/ts-sql/blob/d3a48f7/src/AbstractSql.ts#L175">src/AbstractSql.ts:175</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-type-parameters-title">Type parameters</h4>
+							<ul class="tsd-type-parameters">
+								<li>
+									<h4>T<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h4>
+								</li>
+							</ul>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>t: <span class="tsd-signature-type">T</span></h5>
+								</li>
+								<li>
+									<h5>constraint: <span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;constraints&quot;</span><span class="tsd-signature-symbol">]</span></h5>
+								</li>
+								<li>
+									<h5>log: <span class="tsd-signature-type">SimpleLoggerInterface</span></h5>
+								</li>
+								<li>
+									<h5>thrw: <span class="tsd-signature-type">true</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/wymp/ts-sql/blob/d3a48f7/src/AbstractSql.ts#L181">src/AbstractSql.ts:181</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-type-parameters-title">Type parameters</h4>
+							<ul class="tsd-type-parameters">
+								<li>
+									<h4>T<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">symbol</span></h4>
+								</li>
+							</ul>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>t: <span class="tsd-signature-type">T</span></h5>
+								</li>
+								<li>
+									<h5>constraint: <span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;constraints&quot;</span><span class="tsd-signature-symbol">]</span></h5>
+								</li>
+								<li>
+									<h5>log: <span class="tsd-signature-type">SimpleLoggerInterface</span></h5>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> thrw: <span class="tsd-signature-type">false</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">ResourceTypeMap</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;type&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+			</section>
+		</div>
+		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
+			<nav class="tsd-navigation primary">
+				<ul>
+					<li class=" ">
+						<a href="../modules.html">Exports</a>
+					</li>
+				</ul>
+			</nav>
+			<nav class="tsd-navigation secondary menu-sticky">
+				<ul class="before-current">
+					<li class=" tsd-kind-class tsd-has-type-parameter">
+						<a href="../classes/abstractsql.html" class="tsd-kind-icon">Abstract<wbr>Sql</a>
+					</li>
+					<li class=" tsd-kind-interface">
+						<a href="cacheinterface.html" class="tsd-kind-icon">Cache<wbr>Interface</a>
+					</li>
+				</ul>
+				<ul class="current">
+					<li class="current tsd-kind-interface tsd-has-type-parameter">
+						<a href="sqlinterface.html" class="tsd-kind-icon">Sql<wbr>Interface</a>
+						<ul>
+							<li class=" tsd-kind-method tsd-parent-kind-interface tsd-has-type-parameter">
+								<a href="sqlinterface.html#get" class="tsd-kind-icon">get</a>
+							</li>
+						</ul>
+					</li>
+				</ul>
+				<ul class="after-current">
+					<li class=" tsd-kind-interface tsd-is-external">
+						<a href="uuid.html" class="tsd-kind-icon">uuid</a>
+					</li>
+					<li class=" tsd-kind-type-alias">
+						<a href="../modules.html#defaultval" class="tsd-kind-icon">Default<wbr>Val</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="../modules.html#filter" class="tsd-kind-icon">Filter</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="../modules.html#generictypemap" class="tsd-kind-icon">Generic<wbr>Type<wbr>Map</a>
+					</li>
+					<li class=" tsd-kind-type-alias">
+						<a href="../modules.html#idconstraint" class="tsd-kind-icon">Id<wbr>Constraint</a>
+					</li>
+					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
+						<a href="../modules.html#nodefaults" class="tsd-kind-icon">No<wbr>Defaults</a>
+					</li>
+					<li class=" tsd-kind-type-alias">
+						<a href="../modules.html#nullfilter" class="tsd-kind-icon">Null<wbr>Filter</a>
+					</li>
+					<li class=" tsd-kind-type-alias">
+						<a href="../modules.html#query" class="tsd-kind-icon">Query</a>
+					</li>
+					<li class=" tsd-kind-type-alias">
+						<a href="../modules.html#sqlobj" class="tsd-kind-icon">Sql<wbr>Obj</a>
+					</li>
+					<li class=" tsd-kind-variable">
+						<a href="../modules.html#buffid" class="tsd-kind-icon">buff<wbr>Id</a>
+					</li>
+					<li class=" tsd-kind-variable">
+						<a href="../modules.html#strid" class="tsd-kind-icon">str<wbr>Id</a>
+					</li>
+					<li class=" tsd-kind-function tsd-has-type-parameter">
+						<a href="../modules.html#both" class="tsd-kind-icon">both</a>
+					</li>
+					<li class=" tsd-kind-function tsd-is-external">
+						<a href="../modules.html#uuid" class="tsd-kind-icon">uuid</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+</div>
+<footer class="with-border-bottom">
+	<div class="container">
+		<h2>Legend</h2>
+		<div class="tsd-legend-group">
+			<ul class="tsd-legend">
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected method</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-method tsd-parent-kind-interface"><span class="tsd-kind-icon">Method</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-method tsd-parent-kind-class"><span class="tsd-kind-icon">Method</span></li>
+			</ul>
+		</div>
+	</div>
+</footer>
+<div class="container tsd-generator">
+	<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p>
+</div>
+<div class="overlay"></div>
+<script src="../assets/js/main.js"></script>
+</body>
+</html>
