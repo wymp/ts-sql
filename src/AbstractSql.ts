@@ -631,7 +631,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    * Save changes of the given resource to the database, throwing a 404 error if no object is found
    * for the given primary key. This method expects the resource to exist in the database. It then
    * retrieves it and diffs the incoming object against that pulled from the database. It saves any
-   * changes using the `save` method. This additionally emits data mutation events.
+   * changes using the [[`save`]] method. This additionally emits data mutation events.
    */
   public async update<T extends keyof ResourceTypeMap>(
     t: T,
@@ -667,7 +667,14 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   /**
    * Save the given object. If an object already exists for this object's primary key, then incoming
    * values are diffed against this existing object and the record is updated. Otherwise, the
-   * record is saved as a new object, using any defaults specified to fill in default fields.
+   * record is saved as a new object, using any defaults specified to fill in values for omitted
+   * fields.
+   *
+   * Note that the difference between this method and the [[`update`]] method is that the update
+   * method _expects_ the object to already exist and throws an error if it doesn't. This method
+   * does not require the object to exist.
+   *
+   * Note also that this method will not use any defaults if an existing object is found.
    */
   public async save<T extends keyof ResourceTypeMap>(
     t: T,
@@ -945,7 +952,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    * An internal method for untangling parameters for the `get` method. The `get` method has so
    * many possible signatures that it was far too complicated to this within the method itself.
    */
-  protected assignParams<T extends keyof ResourceTypeMap>(
+  private assignParams<T extends keyof ResourceTypeMap>(
     opts: [
       (
         | SimpleLoggerInterface

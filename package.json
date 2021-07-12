@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "jest",
-    "docgen": "npx typedoc src/index.ts",
+    "docgen": "npx typedoc src/index.ts --sort visibility --sort static-first --sort alphabetical",
     "prepublishOnly": "rm -Rf dist; npx tsc"
   },
   "repository": {
