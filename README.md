@@ -1,7 +1,7 @@
 Wymp SQL
 =========================================================================================
 
-This is a very experimental attempt at a fully generalized, customizable Typescript database
+This is a **very experimental** attempt at a fully generalized, customizable Typescript database
 abstraction. While we made an intentional choice to move away from fully declarative method names
 in favor of more generlized methods, in effect, they remain fairly specific, since you can't call
 the methods without some fairly specific typing.
@@ -20,6 +20,17 @@ resources) and filters (for getting collections) on a per-resource basis. You ca
 default values (either hard-coded or function-based) for each resource type, allowing you to call
 `save` for a new resource without having to provide fields for which reasonable defaults can be
 found.
+
+## Pitfalls
+
+In order to remain useful in the real world, this library must strike a compromise between being
+generic and also providing strict typing. This means that there are instances in which mistakes can
+slip through the cracks and produce unexpected issues at runtime. These are not issues that we view
+as resolvable, since doing so would make the library either too unwieldy or flat out incapable of
+performing. Following is a running list of those issues:
+
+* When overriding the `getSqlForFilterField` method, it is possible to return an array of values
+  when you in fact want to return an array in an array. (TODO: further explain this error)
 
 ## To-Do
 
