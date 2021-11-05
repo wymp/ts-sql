@@ -102,15 +102,15 @@ describe("AbstractSql Class", () => {
       const q = io.mockDb.queries;
       expect(q).toHaveLength(4);
       expect(q[0]).toMatchObject({
-        query: "SELECT `us`.* FROM `users` AS `us` WHERE `id` = ?",
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE (`id` = ?)",
         params: ["abcde"],
       });
       expect(q[1]).toMatchObject({
-        query: "SELECT `us`.* FROM `users` AS `us` WHERE `email` = ?",
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE (`email` = ?)",
         params: ["12345"],
       });
       expect(q[2]).toMatchObject({
-        query: "SELECT `us`.* FROM `users` AS `us` WHERE `primaryAddressId` = ?",
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE (`primaryAddressId` = ?)",
         params: ["00000"],
       });
 
@@ -196,16 +196,16 @@ describe("AbstractSql Class", () => {
       expect(q).toHaveLength(12);
       expect(q[0]).toMatchObject({
         query:
-          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?) LIMIT 0, 25",
+          "SELECT `us`.* FROM `users` AS `us` WHERE (EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?)) LIMIT 0, 25",
         params: ["dog"],
       });
       expect(q[1]).toMatchObject({
         query:
-          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ? && `pets`.`name` LIKE ?) LIMIT 0, 25",
+          "SELECT `us`.* FROM `users` AS `us` WHERE (EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ? && `pets`.`name` LIKE ?)) LIMIT 0, 25",
         params: ["dog", "bowser%"],
       });
       expect(q[2]).toMatchObject({
-        query: "SELECT `us`.* FROM `users` AS `us` WHERE `email` LIKE ? LIMIT 0, 25",
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE (`email` LIKE ?) LIMIT 0, 25",
         params: ["%jimmy%"],
       });
       expect(q[3]).toMatchObject({
@@ -219,32 +219,32 @@ describe("AbstractSql Class", () => {
 
       expect(q[5]).toMatchObject({
         query:
-          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ? && `pets`.`name` LIKE ?) LIMIT 200, 100",
+          "SELECT `us`.* FROM `users` AS `us` WHERE (EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ? && `pets`.`name` LIKE ?)) LIMIT 200, 100",
         params: ["dog", "bowser%"],
       });
       expect(q[6]).toMatchObject({
         query:
-          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ? && `pets`.`name` LIKE ?) ORDER BY `name` ASC LIMIT 0, 100",
+          "SELECT `us`.* FROM `users` AS `us` WHERE (EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ? && `pets`.`name` LIKE ?)) ORDER BY `name` ASC LIMIT 0, 100",
         params: ["dog", "bowser%"],
       });
       expect(q[7]).toMatchObject({
         query:
-          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?) ORDER BY `name` ASC LIMIT 50, 25",
+          "SELECT `us`.* FROM `users` AS `us` WHERE (EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?)) ORDER BY `name` ASC LIMIT 50, 25",
         params: ["dog"],
       });
       expect(q[8]).toMatchObject({
         query:
-          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?) ORDER BY `name` DESC LIMIT 0, 25",
+          "SELECT `us`.* FROM `users` AS `us` WHERE (EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?)) ORDER BY `name` DESC LIMIT 0, 25",
         params: ["dog"],
       });
       expect(q[9]).toMatchObject({
         query:
-          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?) ORDER BY `name` DESC, `type` ASC LIMIT 0, 25",
+          "SELECT `us`.* FROM `users` AS `us` WHERE (EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?)) ORDER BY `name` DESC, `type` ASC LIMIT 0, 25",
         params: ["dog"],
       });
       expect(q[10]).toMatchObject({
         query:
-          "SELECT `us`.* FROM `users` AS `us` WHERE EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?) ORDER BY `name` DESC, `type` ASC LIMIT 0, 25",
+          "SELECT `us`.* FROM `users` AS `us` WHERE (EXISTS (SELECT * FROM `pets` AS `pe` WHERE `ownerId` = `us`.`id` && `type` = ?)) ORDER BY `name` DESC, `type` ASC LIMIT 0, 25",
         params: ["dog"],
       });
       expect(q[11]).toMatchObject({
@@ -263,7 +263,7 @@ describe("AbstractSql Class", () => {
       const q = io.mockDb.queries;
       expect(q).toHaveLength(1);
       expect(q[0]).toMatchObject({
-        query: "SELECT `us`.* FROM `users` AS `us` WHERE `id` = ?",
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE (`id` = ?)",
       });
       expect(Buffer.isBuffer(q[0].params![0])).toBe(true);
     });
@@ -274,6 +274,7 @@ describe("AbstractSql Class", () => {
       const user = await io.save(
         "users",
         { name: "Milli Vanilli", email: "test@example.com" },
+        <any>{},
         log
       );
       expect(user).toMatchObject({

@@ -201,6 +201,8 @@ export type Query = {
   params?: undefined | null | Array<SqlValue>;
   limit?: undefined | null | string;
   sort?: undefined | null | Array<string>;
+  groupby?: undefined | null | Array<string>;
+  having?: undefined | null | Array<string>;
 };
 
 /**
@@ -612,7 +614,9 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
         `SELECT ${q.select.join(", ")} ` +
         `FROM ${q.from}` +
         (q.join && q.join.length > 0 ? ` JOIN ${q.join.join(" JOIN ")}` : "") +
-        (q.where && q.where.length > 0 ? ` WHERE ${q.where.join(" && ")}` : "") +
+        (q.where && q.where.length > 0 ? ` WHERE (${q.where.join(") && (")})` : "") +
+        (q.groupby && q.groupby.length > 0 ? ` GROUP BY ${q.groupby.join(", ")}` : "") +
+        (q.having && q.having.length > 0 ? ` HAVING (${q.having.join(") && (")})` : "") +
         (q.sort && q.sort.length > 0 ? ` ORDER BY ${q.sort.join(", ")}` : "") +
         (q.limit ? ` LIMIT ${q.limit}` : ""),
       params: q.params && q.params.length > 0 ? q.params : undefined,
