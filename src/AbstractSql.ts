@@ -943,6 +943,12 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     if (base.params || add.params) {
       result.params = [...(base.params || []), ...(add.params || [])];
     }
+    if (base.groupby || add.groupby) {
+      result.groupby = [...(base.groupby || []), ...(add.groupby || [])];
+    }
+    if (base.having || add.having) {
+      result.having = [...(base.having || []), ...(add.having || [])];
+    }
     if (add.limit || base.limit) {
       result.limit = add.limit || base.limit;
     }
