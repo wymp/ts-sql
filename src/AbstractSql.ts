@@ -296,8 +296,13 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    * data events. Note that this is largely the same data as the audit client, but the format
    * will be easier to use, and it additionally allows some separation between an auditing
    * system and a more generalized data environment.
+   *
+   * While you may utilize these messages in whatever way you like, a common way to use the data
+   * would be to publish a message with subject `${domain}.${action}.${resource.type}`.
    */
-  protected pubsub: { publish(msg: unknown): Promise<unknown> } | null = null;
+  protected pubsub: null | {
+    publish(msg: { action: string; resource: { type: string } }): Promise<unknown>;
+  } = null;
 
   /**
    * Get a resource
@@ -830,7 +835,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       p.push(
         this.pubsub.publish({
           action: currentResource ? "updated" : "created",
-          resource: { type: t, ...resource },
+          resource: { type: <string>t, ...resource },
         })
       );
     }
@@ -901,7 +906,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
         p.push(
           this.pubsub.publish({
             action: "deleted",
-            resource: { type: t, ...resource },
+            resource: { type: <string>t, ...resource },
           })
         );
       }
