@@ -61,7 +61,7 @@
 				<a href="#wymp-sql" id="wymp-sql" style="color: inherit; text-decoration: none;">
 					<h1>Wymp SQL</h1>
 				</a>
-				<p>This is a very experimental attempt at a fully generalized, customizable Typescript database
+				<p>This is a <strong>very experimental</strong> attempt at a fully generalized, customizable Typescript database
 					abstraction. While we made an intentional choice to move away from fully declarative method names
 					in favor of more generlized methods, in effect, they remain fairly specific, since you can&#39;t call
 				the methods without some fairly specific typing.</p>
@@ -77,6 +77,18 @@
 					default values (either hard-coded or function-based) for each resource type, allowing you to call
 					<code>save</code> for a new resource without having to provide fields for which reasonable defaults can be
 				found.</p>
+				<a href="#pitfalls" id="pitfalls" style="color: inherit; text-decoration: none;">
+					<h2>Pitfalls</h2>
+				</a>
+				<p>In order to remain useful in the real world, this library must strike a compromise between being
+					generic and also providing strict typing. This means that there are instances in which mistakes can
+					slip through the cracks and produce unexpected issues at runtime. These are not issues that we view
+					as resolvable, since doing so would make the library either too unwieldy or flat out incapable of
+				performing. Following is a running list of those issues:</p>
+				<ul>
+					<li>When overriding the <code>getSqlForFilterField</code> method, it is possible to return an array of values
+					when you in fact want to return an array in an array. (TODO: further explain this error)</li>
+				</ul>
 				<a href="#to-do" id="to-do" style="color: inherit; text-decoration: none;">
 					<h2>To-Do</h2>
 				</a>
@@ -94,53 +106,53 @@
 						<a href="modules.html">Exports</a>
 					</li>
 					<li class=" tsd-kind-namespace">
-						<a href="modules/typegen.html">Type<wbr>Gen</a>
+						<a href="modules/TypeGen.html">Type<wbr>Gen</a>
 					</li>
 				</ul>
 			</nav>
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
 					<li class=" tsd-kind-class tsd-has-type-parameter">
-						<a href="classes/abstractsql.html" class="tsd-kind-icon">Abstract<wbr>Sql</a>
+						<a href="classes/AbstractSql.html" class="tsd-kind-icon">Abstract<wbr>Sql</a>
 					</li>
 					<li class=" tsd-kind-interface">
-						<a href="interfaces/cacheinterface.html" class="tsd-kind-icon">Cache<wbr>Interface</a>
+						<a href="interfaces/CacheInterface.html" class="tsd-kind-icon">Cache<wbr>Interface</a>
 					</li>
 					<li class=" tsd-kind-type-alias">
-						<a href="modules.html#defaultval" class="tsd-kind-icon">Default<wbr>Val</a>
+						<a href="modules.html#DefaultVal" class="tsd-kind-icon">Default<wbr>Val</a>
 					</li>
 					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
-						<a href="modules.html#filter" class="tsd-kind-icon">Filter</a>
+						<a href="modules.html#Filter" class="tsd-kind-icon">Filter</a>
 					</li>
 					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
-						<a href="modules.html#generictypemap" class="tsd-kind-icon">Generic<wbr>Type<wbr>Map</a>
+						<a href="modules.html#GenericTypeMap" class="tsd-kind-icon">Generic<wbr>Type<wbr>Map</a>
 					</li>
 					<li class=" tsd-kind-type-alias">
-						<a href="modules.html#idconstraint" class="tsd-kind-icon">Id<wbr>Constraint</a>
+						<a href="modules.html#IdConstraint" class="tsd-kind-icon">Id<wbr>Constraint</a>
 					</li>
 					<li class=" tsd-kind-type-alias tsd-has-type-parameter">
-						<a href="modules.html#nodefaults" class="tsd-kind-icon">No<wbr>Defaults</a>
+						<a href="modules.html#NoDefaults" class="tsd-kind-icon">No<wbr>Defaults</a>
 					</li>
 					<li class=" tsd-kind-type-alias">
-						<a href="modules.html#nullfilter" class="tsd-kind-icon">Null<wbr>Filter</a>
+						<a href="modules.html#NullFilter" class="tsd-kind-icon">Null<wbr>Filter</a>
 					</li>
 					<li class=" tsd-kind-type-alias">
-						<a href="modules.html#query" class="tsd-kind-icon">Query</a>
+						<a href="modules.html#Query" class="tsd-kind-icon">Query</a>
 					</li>
 					<li class=" tsd-kind-interface tsd-has-type-parameter">
-						<a href="interfaces/sqlinterface.html" class="tsd-kind-icon">Sql<wbr>Interface</a>
+						<a href="interfaces/SqlInterface.html" class="tsd-kind-icon">Sql<wbr>Interface</a>
 					</li>
 					<li class=" tsd-kind-type-alias">
-						<a href="modules.html#sqlobj" class="tsd-kind-icon">Sql<wbr>Obj</a>
+						<a href="modules.html#SqlObj" class="tsd-kind-icon">Sql<wbr>Obj</a>
 					</li>
 					<li class=" tsd-kind-function tsd-has-type-parameter">
 						<a href="modules.html#both" class="tsd-kind-icon">both</a>
 					</li>
 					<li class=" tsd-kind-variable">
-						<a href="modules.html#buffid" class="tsd-kind-icon">buff<wbr>Id</a>
+						<a href="modules.html#buffId" class="tsd-kind-icon">buff<wbr>Id</a>
 					</li>
 					<li class=" tsd-kind-variable">
-						<a href="modules.html#strid" class="tsd-kind-icon">str<wbr>Id</a>
+						<a href="modules.html#strId" class="tsd-kind-icon">str<wbr>Id</a>
 					</li>
 					<li class=" tsd-kind-function tsd-is-external">
 						<a href="modules.html#uuid" class="tsd-kind-icon">uuid</a>
