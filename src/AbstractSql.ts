@@ -1,5 +1,6 @@
 import { v6 as uuid } from "@kael-shipman/uuid-with-v6";
 import {
+  BufferLike,
   SimpleSqlDbInterface,
   SqlValue,
   SqlPrimitive,
@@ -91,7 +92,7 @@ export type GenericTypeMap<T extends SqlObj = {}> = {
 };
 
 /** Convenience type defining a constraint on a standard `id` field */
-export type IdConstraint = { id: string | number | Buffer | undefined | null };
+export type IdConstraint = { id: string | number | BufferLike | undefined | null };
 
 /** Convenience type defining a filter with no possible values */
 export type NullFilter = { _t: "filter" };
@@ -644,7 +645,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    */
   public async update<T extends keyof ResourceTypeMap>(
     t: T,
-    pkVal: string | Buffer,
+    pkVal: string | BufferLike,
     _resource: Partial<ResourceTypeMap[T]["type"]>,
     auth: Auth.ReqInfo,
     log: SimpleLoggerInterface
@@ -855,18 +856,18 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   ): Promise<void>;
   public async delete<T extends keyof ResourceTypeMap>(
     t: T,
-    id: string | Buffer | undefined | null,
+    id: string | BufferLike | undefined | null,
     auth: Auth.ReqInfo,
     log: SimpleLoggerInterface
   ): Promise<void>;
   public async delete<T extends keyof ResourceTypeMap>(
     t: T,
-    resourceOrId: ResourceTypeMap[T]["type"] | string | Buffer | undefined | null,
+    resourceOrId: ResourceTypeMap[T]["type"] | string | BufferLike | undefined | null,
     auth: Auth.ReqInfo,
     log: SimpleLoggerInterface
   ): Promise<void> {
     const pk = <keyof ResourceTypeMap[T]["type"]>(this.primaryKeys[t] || "id");
-    let pkVal: Buffer | string | undefined | null = null;
+    let pkVal: BufferLike | string | undefined | null = null;
     if (Buffer.isBuffer(resourceOrId) || typeof resourceOrId === "string") {
       pkVal = resourceOrId;
     } else if ((resourceOrId as any)[pk]) {
@@ -1107,14 +1108,14 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    * validation is performed. If the given string is more than 16 bits, you'll get a uuid plus
    * whatever extra there was.
    */
-  public bufferToUuid(buf: Buffer): string {
+  public bufferToUuid(buf: BufferLike): string {
     return bufferToUuid(buf);
   }
 
   /**
    * Converts a hex string with possible dashes to a buffer
    */
-  public hexToBuffer(hex: string): Buffer {
+  public hexToBuffer(hex: string): BufferLike {
     return hexToBuffer(hex);
   }
 
@@ -1122,21 +1123,21 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    * Convenience export of the uuid function, optionally converting to buffer
    */
   public uuid(t: "string"): string;
-  public uuid(t?: "buffer"): Buffer;
-  public uuid(t?: "buffer" | "string"): Buffer | string {
+  public uuid(t?: "buffer"): BufferLike;
+  public uuid(t?: "buffer" | "string"): BufferLike | string {
     const id = uuid();
     return t && t === "string" ? id : this.hexToBuffer(id);
   }
 }
 
-const bufferToUuid = (buf: Buffer): string => {
+const bufferToUuid = (buf: BufferLike): string => {
   return `${bite(buf, 0, 4)}-${bite(buf, 4, 6)}-${bite(buf, 6, 8)}-${bite(buf, 8, 10)}-${bite(
     buf,
     10
   )}`;
 };
 
-const hexToBuffer = (hex: string): Buffer => {
+const hexToBuffer = (hex: string): BufferLike => {
   return Buffer.from(hex.replace(/-/g, ""), "hex");
 };
 
@@ -1155,4 +1156,4 @@ const sortDir: { [k: string]: "ASC" | "DESC" } = {
   "-": "DESC",
 };
 
-const bite = (buf: Buffer, i: number, j?: number): string => buf.slice(i, j).toString("hex");
+const bite = (buf: BufferLike, i: number, j?: number): string => buf.slice(i, j).toString("hex");
