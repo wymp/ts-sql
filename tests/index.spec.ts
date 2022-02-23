@@ -1,5 +1,6 @@
 import * as E from "@wymp/http-errors";
 import { MockSimpleLogger } from "@wymp/ts-simple-interfaces-testing";
+import { Auth } from "@wymp/types";
 import { AbstractSql, Query } from "../src";
 import { MockSql } from "./MockSql";
 import { Test } from "./Types";
@@ -82,6 +83,7 @@ class TestIo extends AbstractSql<Test.TypeMap> {
 describe("AbstractSql Class", () => {
   let io: TestIo;
   let log: MockSimpleLogger;
+  let fakeAuth: Auth.ReqInfo = <any>{};
 
   beforeEach(() => {
     log = new MockSimpleLogger();
@@ -274,7 +276,7 @@ describe("AbstractSql Class", () => {
       const user = await io.save(
         "users",
         { name: "Milli Vanilli", email: "test@example.com" },
-        <any>{},
+        fakeAuth,
         log
       );
       expect(user).toMatchObject({
@@ -288,6 +290,79 @@ describe("AbstractSql Class", () => {
         status: Test.Defaults["users"].status,
         createdMs: expect.any(Number),
       });
+    });
+  });
+
+  describe("delete", () => {
+    const user = {
+      id: "abcde",
+      name: "Milli Vanilli",
+      email: "test@example.com",
+      dob: Test.Defaults["users"].dob,
+      deleted: Test.Defaults["users"].deleted,
+      verified: Test.Defaults["users"].verified,
+      primaryAddressId: Test.Defaults["users"].primaryAddressId,
+      status: Test.Defaults["users"].status,
+      createdMs: Date.now(),
+    };
+
+    test("can delete user with constraint", async () => {
+      io.mockDb.setNextResult([user]);
+      await io.delete("users", { id: "abcde" }, fakeAuth, log);
+
+      const q = io.mockDb.queries;
+      expect(q).toHaveLength(2);
+      expect(q[0]).toMatchObject({
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE (`id` = ?)",
+        params: ["abcde"],
+      });
+      expect(q[1]).toMatchObject({
+        query: "DELETE FROM `users` WHERE (`id` = ?)",
+        params: ["abcde"],
+      });
+
+      // Uncomment to test typings
+
+      // NOTE: Currently this _should_ fail validation but it doesn't. Appears to be an error in
+      // typescript.
+      //await io.delete("users", { id: "abcde", email: "12345" }, fakeAuth, log);
+    });
+
+    test("can delete user with filter", async () => {
+      const res1: Array<Test.User> = [];
+      for (let i = 0; i < 100; i++) {
+        res1.push(user);
+      }
+      // Select 1
+      io.mockDb.setNextResult(res1);
+      // Delete 1
+      io.mockDb.setNextResult([]);
+      // Select 2
+      io.mockDb.setNextResult([user]);
+      // Delete 2
+      io.mockDb.setNextResult([]);
+      // Go
+      await io.delete("users", { _t: "filter", emailLike: "abcde" }, fakeAuth, log);
+
+      const q = io.mockDb.queries;
+      expect(q).toHaveLength(4);
+
+      const select = {
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE (`email` LIKE ?) LIMIT 0, 100",
+        params: ["abcde"],
+      };
+      const del = {
+        query: "DELETE FROM `users` WHERE (`email` LIKE ?) LIMIT 0, 100",
+        params: ["abcde"],
+      };
+
+      expect(q[0]).toMatchObject(select);
+      expect(q[1]).toMatchObject(del);
+      expect(q[2]).toMatchObject(select);
+      expect(q[3]).toMatchObject(del);
+
+      // Uncomment to test typings
+      //await io.delete("users", { _t: "filter", bimchow: "12345" }, fakeAuth, log);
     });
   });
 

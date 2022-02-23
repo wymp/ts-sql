@@ -184,6 +184,35 @@ export interface SqlInterface<ResourceTypeMap extends GenericTypeMap> {
     log: SimpleLoggerInterface,
     thrw?: false
   ): Promise<ResourceTypeMap[T]["type"] | undefined>;
+
+  save<T extends keyof ResourceTypeMap>(
+    t: T,
+    _resource: PartialSelect<ResourceTypeMap[T]["type"], keyof ResourceTypeMap[T]["defaults"]>,
+    auth: Auth.ReqInfo,
+    log: SimpleLoggerInterface,
+    currentResource?: ResourceTypeMap[T]["type"]
+  ): Promise<ResourceTypeMap[T]["type"]>;
+
+  update<T extends keyof ResourceTypeMap>(
+    t: T,
+    pkVal: string | Buffer,
+    _resource: Partial<ResourceTypeMap[T]["type"]>,
+    auth: Auth.ReqInfo,
+    log: SimpleLoggerInterface
+  ): Promise<ResourceTypeMap[T]["type"]>;
+
+  delete<T extends keyof ResourceTypeMap>(
+    t: T,
+    filter: ResourceTypeMap[T]["filters"],
+    auth: Auth.ReqInfo,
+    log: SimpleLoggerInterface
+  ): Promise<void>;
+  delete<T extends keyof ResourceTypeMap>(
+    t: T,
+    constraint: ResourceTypeMap[T]["constraints"],
+    auth: Auth.ReqInfo,
+    log: SimpleLoggerInterface
+  ): Promise<void>;
 }
 
 /**
@@ -193,16 +222,23 @@ export interface SqlInterface<ResourceTypeMap extends GenericTypeMap> {
  *
  * This is exported mainly so you can more easily define the override of certain methods.
  */
-export type Query = {
+export type Query = SelectQuery | DeleteQuery;
+export type SelectQuery = {
+  t: "select";
   select: Array<string>;
-  from: string;
   join?: undefined | null | Array<string>;
+  groupby?: undefined | null | Array<string>;
+  having?: undefined | null | Array<string>;
+} & QueryCommon;
+export type DeleteQuery = {
+  t: "delete";
+} & QueryCommon;
+export type QueryCommon = {
+  from: string;
   where?: undefined | null | Array<string>;
   params?: undefined | null | Array<SqlValue>;
   limit?: undefined | null | string;
   sort?: undefined | null | Array<string>;
-  groupby?: undefined | null | Array<string>;
-  having?: undefined | null | Array<string>;
 };
 
 /**
@@ -374,7 +410,8 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     const table = <string>(this.tableMap[t] || this.sanitizeFieldName(t as string));
     const tableAlias = table.slice(0, 2);
 
-    let query: Query = {
+    let query: SelectQuery = {
+      t: "select",
       select: [`\`${tableAlias}\`.*`],
       from: `\`${table}\` AS \`${tableAlias}\``,
     };
@@ -387,14 +424,17 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
         // Turn the filters into a more complicated query
         for (const field in filter) {
           if (filter[field] !== undefined) {
-            query = this.mergeQuery(query, this.getSqlForFilterField(t, field, filter[field]));
+            query = this.mergeQuery<SelectQuery>(
+              query,
+              this.getSqlForFilterField(t, field, filter[field])
+            );
           }
         }
       }
 
       // Apply pagination and sort
       const paramData = this.processCollectionParams(t, collectionParams);
-      query = this.mergeQuery(query, paramData.query);
+      query = this.mergeQuery<SelectQuery>(query, paramData.query);
 
       // Compose query
       const { queryStr, params } = this.composeSql(query);
@@ -446,7 +486,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
         `${t}-${JSON.stringify(constraint)}`,
         async () => {
           // Compose query
-          query = this.mergeQuery(query, <Partial<Query>>constraint);
+          query = this.mergeQuery<SelectQuery>(query, <Partial<SelectQuery>>constraint);
           const { queryStr, params } = this.composeSql(query);
 
           // Execute
@@ -488,7 +528,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     t: T,
     field: string,
     val: any
-  ): Partial<Query> {
+  ): Partial<QueryCommon> {
     // Ignore the special '_t' tag
     if (field === "_t") {
       return {};
@@ -523,8 +563,8 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   protected processCollectionParams<T extends keyof ResourceTypeMap>(
     t: T,
     params: undefined | Api.Server.CollectionParams
-  ): { meta: Api.NextPageParams; query: Partial<Query> } {
-    const query: Partial<Query> = {};
+  ): { meta: Api.NextPageParams; query: Partial<QueryCommon> } {
+    const query: Partial<QueryCommon> = {};
 
     const pg = params?.__pg;
     const sort = params?.__sort?.trim();
@@ -614,18 +654,28 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    * Compose a final SQL query from the given query object
    */
   protected composeSql(q: Query): { queryStr: string; params: Array<SqlValue> | undefined } {
-    return {
-      queryStr:
-        `SELECT ${q.select.join(", ")} ` +
-        `FROM ${q.from}` +
-        (q.join && q.join.length > 0 ? ` JOIN ${q.join.join(" JOIN ")}` : "") +
-        (q.where && q.where.length > 0 ? ` WHERE (${q.where.join(") && (")})` : "") +
-        (q.groupby && q.groupby.length > 0 ? ` GROUP BY ${q.groupby.join(", ")}` : "") +
-        (q.having && q.having.length > 0 ? ` HAVING (${q.having.join(") && (")})` : "") +
-        (q.sort && q.sort.length > 0 ? ` ORDER BY ${q.sort.join(", ")}` : "") +
-        (q.limit ? ` LIMIT ${q.limit}` : ""),
-      params: q.params && q.params.length > 0 ? q.params : undefined,
-    };
+    return q.t === "select"
+      ? {
+          queryStr:
+            `SELECT ${q.select.join(", ")} ` +
+            `FROM ${q.from}` +
+            (q.join && q.join.length > 0 ? ` JOIN ${q.join.join(" JOIN ")}` : "") +
+            (q.where && q.where.length > 0 ? ` WHERE (${q.where.join(") && (")})` : "") +
+            (q.groupby && q.groupby.length > 0 ? ` GROUP BY ${q.groupby.join(", ")}` : "") +
+            (q.having && q.having.length > 0 ? ` HAVING (${q.having.join(") && (")})` : "") +
+            (q.sort && q.sort.length > 0 ? ` ORDER BY ${q.sort.join(", ")}` : "") +
+            (q.limit ? ` LIMIT ${q.limit}` : ""),
+          params: q.params && q.params.length > 0 ? q.params : undefined,
+        }
+      : {
+          queryStr:
+            `DELETE ` +
+            `FROM ${q.from}` +
+            (q.where && q.where.length > 0 ? ` WHERE (${q.where.join(") && (")})` : "") +
+            (q.sort && q.sort.length > 0 ? ` ORDER BY ${q.sort.join(", ")}` : "") +
+            (q.limit ? ` LIMIT ${q.limit}` : ""),
+          params: q.params && q.params.length > 0 ? q.params : undefined,
+        };
   }
 
   protected sanitizeFieldName(field: string): string {
@@ -847,73 +897,162 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   /**
    * Delete the given resource
    */
-  public async delete<T extends keyof ResourceTypeMap>(
+  public delete<T extends keyof ResourceTypeMap>(
     t: T,
-    resource: ResourceTypeMap[T]["type"],
+    filter: ResourceTypeMap[T]["filters"],
+    auth: Auth.ReqInfo,
+    log: SimpleLoggerInterface
+  ): Promise<void>;
+  public delete<T extends keyof ResourceTypeMap>(
+    t: T,
+    constraint: ResourceTypeMap[T]["constraints"],
     auth: Auth.ReqInfo,
     log: SimpleLoggerInterface
   ): Promise<void>;
   public async delete<T extends keyof ResourceTypeMap>(
     t: T,
-    id: string | Buffer | undefined | null,
-    auth: Auth.ReqInfo,
-    log: SimpleLoggerInterface
-  ): Promise<void>;
-  public async delete<T extends keyof ResourceTypeMap>(
-    t: T,
-    resourceOrId: ResourceTypeMap[T]["type"] | string | Buffer | undefined | null,
+    filterOrConstraint: ResourceTypeMap[T]["filters"] | ResourceTypeMap[T]["constraints"],
     auth: Auth.ReqInfo,
     log: SimpleLoggerInterface
   ): Promise<void> {
-    const pk = <keyof ResourceTypeMap[T]["type"]>(this.primaryKeys[t] || "id");
-    let pkVal: Buffer | string | undefined | null = null;
-    if (Buffer.isBuffer(resourceOrId) || typeof resourceOrId === "string") {
-      pkVal = resourceOrId;
-    } else if ((resourceOrId as any)[pk]) {
-      pkVal = (resourceOrId as any)[pk];
-    }
-    const pkValStr = Buffer.isBuffer(pkVal) ? pkVal.toString("hex") : `${pkVal}`;
-    log.debug(`Deleting ${t} with id ${pkValStr}`);
-    const resource = this.get(t, { [pk]: pkVal }, log, false);
-    if (resource) {
-      const table = <string>(this.tableMap[t] || this.sanitizeFieldName(t as string));
-      await this.db.query(
-        "DELETE FROM `" + table + "` WHERE `" + pk + "` = ?",
-        pkVal ? [pkVal] : []
-      );
-      log.debug(`Resource deleted publishing messages`);
+    let loop = true;
 
-      // Bust cache
-      this.cache.clear(new RegExp(`${t}-.*`));
+    // Since we're deleting records, we're _consuming_ pages, not traversing. Therefore,
+    // we're always on page 1 until we've deleted all the records.
+    const collectionParams: Api.Server.CollectionParams = {
+      __pg: {
+        size: 100,
+        cursor: Buffer.from("num:1", "utf8").toString("base64"),
+      },
+    };
 
-      // Publish audit message
-      const p: Array<Promise<unknown>> = [];
-      if (this.audit) {
-        const targetType = <string>t;
-        log.debug(`Publishing audit message`);
-        p.push(
-          this.audit.delete({
-            auth,
-            targetType,
-            targetId: pkValStr,
-          })
-        );
+    // Delete in batches, since we have to publish deletion messages for each
+    while (loop) {
+      // Get resource(s) using filter or constraint
+      let resources: Array<ResourceTypeMap[T]["type"]> = [];
+      if (!this.isFilter<T>(filterOrConstraint)) {
+        log.debug(`Getting resource to delete by constraint`);
+        const res = await this.get(t, filterOrConstraint, log, false);
+        resources = res ? [res] : [];
+        loop = false;
+      } else {
+        log.debug(`Getting resource(s) to delete by filter`);
+        const res = await this.get(t, filterOrConstraint, collectionParams, log);
+        resources = res.data;
+
+        // Loop until we've gotten the last page of resources
+        loop = resources.length >= 100;
       }
 
-      // Publish domain message
-      if (this.pubsub) {
-        log.debug(`Publishing domain message`);
-        p.push(
-          this.pubsub.publish({
-            action: "deleted",
-            resource: { type: <string>t, ...resource },
-          })
-        );
-      }
+      // Process resource deletion
+      if (resources.length === 0) {
+        log.info(`Resource(s) not found. Nothing to delete.`);
+      } else {
+        log.debug(`Deleting ${resources.length} ${t}`);
 
-      await Promise.all(p);
-    } else {
-      log.info(`Resource not found. Nothing to delete.`);
+        // Apply filter or constraint
+        let query: DeleteQuery = {
+          t: "delete",
+          from: "`" + (this.tableMap[t]! || this.sanitizeFieldName(t as string)) + "`",
+        };
+        if (
+          this.isFilter<T>(filterOrConstraint) &&
+          Object.keys(filterOrConstraint).filter((k) => k !== "_t").length > 0
+        ) {
+          // Turn the filters into a more complicated query
+          const filter = filterOrConstraint;
+          for (const field in filter) {
+            if (filter[field] !== undefined) {
+              query = this.mergeQuery<DeleteQuery>(
+                query,
+                this.getSqlForFilterField(t, field, filter[field])
+              );
+            }
+          }
+
+          // Apply pagination and sort
+          const paramData = this.processCollectionParams(t, collectionParams);
+          query = this.mergeQuery<DeleteQuery>(query, paramData.query);
+        } else if (!this.isFilter<T>(filterOrConstraint)) {
+          const constraint = this.processConstraint(t, filterOrConstraint);
+
+          // Validate
+          if (constraint.where.length === 0) {
+            throw new E.InternalServerError(
+              `No constraints passed for deleting resource '${t}'. Constraint: ${JSON.stringify(
+                filterOrConstraint
+              )}`
+            );
+          }
+
+          log.debug(`Deleting ${t} using ${JSON.stringify(constraint)} from database`);
+
+          // If there's one or more undefined param, we can't use it
+          if (constraint.params.filter((v) => v === undefined).length > 0) {
+            log.info(`Constraint is incomplete. Cannot use. ${JSON.stringify(constraint)}`);
+            throw new E.NotFound(
+              `No constraint value passed for ${t}, so the resource cannot be found.`
+            );
+          }
+
+          query = this.mergeQuery<DeleteQuery>(query, <Partial<DeleteQuery>>constraint);
+        }
+
+        // Compose query
+        const { queryStr, params } = this.composeSql(query);
+
+        // Execute
+        log.debug(`Final query: ${queryStr}; Params: ${JSON.stringify(params)}`);
+        await this.db.query(queryStr, params);
+
+        log.debug(`Resource(s) deleted; publishing messages`);
+
+        // Bust cache
+        this.cache.clear(new RegExp(`${t}-.*`));
+
+        // Publish messages
+        const p: Array<Promise<unknown>> = [];
+        for (let i = 0; i < resources.length; i++) {
+          // Publish audit message
+          const resource = resources[i];
+          const pk = <keyof ResourceTypeMap[T]["type"]>(this.primaryKeys[t] || "id");
+          const pkVal = resource[pk];
+          const pkValStr = Buffer.isBuffer(pkVal) ? this.bufferToUuid(pkVal) : `${pkVal}`;
+          if (this.audit) {
+            const targetType = <string>t;
+            log.debug(`Publishing audit message`);
+            p.push(
+              this.audit.delete({
+                auth,
+                targetType,
+                targetId: pkValStr,
+              })
+            );
+          }
+
+          // Publish domain message
+          if (this.pubsub) {
+            log.debug(`Publishing domain message`);
+            p.push(
+              this.pubsub
+                .publish({
+                  action: "deleted",
+                  resource: { type: <string>t, ...resource },
+                })
+                .catch((e) => {
+                  log.error(
+                    `Couldn't publish migration message for 'deleted' resource: ${JSON.stringify(
+                      resource
+                    )}`
+                  );
+                })
+            );
+          }
+        }
+
+        // Wait for message publishing to complete
+        await Promise.all(p);
+      }
     }
   }
 
@@ -934,32 +1073,40 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   /**
    * Takes two Query objects and merges them together into one
    */
-  protected mergeQuery(base: Query, add: Partial<Query>): Query {
-    const result: Query = {
-      select: [...base.select, ...(add.select || [])],
-      from: add.from || base.from,
-    };
-    if (base.join || add.join) {
-      result.join = [...(base.join || []), ...(add.join || [])];
+  protected mergeQuery<Q extends Query>(base: Q, add: Partial<Q>): Q {
+    // Copy base into new object
+    const result: Q = { ...base };
+
+    if (add.where) {
+      result.where = [...(result.where || []), ...(<Array<string>>(add.where || []))];
     }
-    if (base.where || add.where) {
-      result.where = [...(base.where || []), ...(add.where || [])];
+    if (add.params) {
+      result.params = [...(result.params || []), ...(<Array<SqlValue>>(add.params || []))];
     }
-    if (base.params || add.params) {
-      result.params = [...(base.params || []), ...(add.params || [])];
+    if (add.limit) {
+      result.limit = add.limit;
     }
-    if (base.groupby || add.groupby) {
-      result.groupby = [...(base.groupby || []), ...(add.groupby || [])];
+    if (add.sort) {
+      result.sort = [...(result.sort || []), ...(<Array<string>>(add.sort || []))];
     }
-    if (base.having || add.having) {
-      result.having = [...(base.having || []), ...(add.having || [])];
+
+    // Select-specific terms
+    if (result.t === "select") {
+      // Stupidly have to cast to satisfy stupid typescript......
+      const _add = <Partial<SelectQuery>>add;
+      result.select = [...result.select, ...(_add.select || [])];
+
+      if (_add.join) {
+        result.join = [...(result.join || []), ...(_add.join || [])];
+      }
+      if (_add.groupby) {
+        result.groupby = [...(result.groupby || []), ...(_add.groupby || [])];
+      }
+      if (_add.having) {
+        result.having = [...(result.having || []), ...(_add.having || [])];
+      }
     }
-    if (add.limit || base.limit) {
-      result.limit = add.limit || base.limit;
-    }
-    if (base.sort || add.sort) {
-      result.sort = [...(base.sort || []), ...(add.sort || [])];
-    }
+
     return result;
   }
 
