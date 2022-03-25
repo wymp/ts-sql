@@ -717,7 +717,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
 
     const resource: ResourceTypeMap[T]["type"] = {
       ...currentResource,
-      ..._resource,
+      ...resourceWithoutId,
     };
 
     return await this.save(t, resource, auth, log, currentResource);
@@ -920,10 +920,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     // Since we're deleting records, we're _consuming_ pages, not traversing. Therefore,
     // we're always on page 1 until we've deleted all the records.
     const collectionParams: Api.Server.CollectionParams = {
-      __pg: {
-        size: 100,
-        cursor: Buffer.from("num:1", "utf8").toString("base64"),
-      },
+      __pg: { size: 100 },
     };
 
     // Delete in batches, since we have to publish deletion messages for each
@@ -954,26 +951,22 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
         let query: DeleteQuery = {
           t: "delete",
           from: "`" + (this.tableMap[t]! || this.sanitizeFieldName(t as string)) + "`",
+          limit: "100",
         };
-        if (
-          this.isFilter<T>(filterOrConstraint) &&
-          Object.keys(filterOrConstraint).filter((k) => k !== "_t").length > 0
-        ) {
-          // Turn the filters into a more complicated query
-          const filter = filterOrConstraint;
-          for (const field in filter) {
-            if (filter[field] !== undefined) {
-              query = this.mergeQuery<DeleteQuery>(
-                query,
-                this.getSqlForFilterField(t, field, filter[field])
-              );
+        if (this.isFilter<T>(filterOrConstraint)) {
+          if (Object.keys(filterOrConstraint).filter((k) => k !== "_t").length > 0) {
+            // Turn the filters into a more complicated query
+            const filter = filterOrConstraint;
+            for (const field in filter) {
+              if (filter[field] !== undefined) {
+                query = this.mergeQuery<DeleteQuery>(
+                  query,
+                  this.getSqlForFilterField(t, field, filter[field])
+                );
+              }
             }
           }
-
-          // Apply pagination and sort
-          const paramData = this.processCollectionParams(t, collectionParams);
-          query = this.mergeQuery<DeleteQuery>(query, paramData.query);
-        } else if (!this.isFilter<T>(filterOrConstraint)) {
+        } else {
           const constraint = this.processConstraint(t, filterOrConstraint);
 
           // Validate
@@ -985,7 +978,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
             );
           }
 
-          log.debug(`Deleting ${t} using ${JSON.stringify(constraint)} from database`);
+          log.debug(`Deleting ${t} from database using ${JSON.stringify(constraint)}`);
 
           // If there's one or more undefined param, we can't use it
           if (constraint.params.filter((v) => v === undefined).length > 0) {
