@@ -1246,6 +1246,8 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
    * Convenience function for converting a buffer to a formatted uuid. Note that no actual
    * validation is performed. If the given string is more than 16 bits, you'll get a uuid plus
    * whatever extra there was.
+   *
+   * @deprecated use the exported convenience functions instead
    */
   public bufferToUuid(buf: Buffer): string {
     return bufferToUuid(buf);
@@ -1253,6 +1255,8 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
 
   /**
    * Converts a hex string with possible dashes to a buffer
+   *
+   * @deprecated use the exported convenience functions instead
    */
   public hexToBuffer(hex: string): Buffer {
     return hexToBuffer(hex);
@@ -1269,14 +1273,22 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   }
 }
 
-const bufferToUuid = (buf: Buffer): string => {
+/**
+ * Convenience function for converting a buffer to a formatted uuid. Note that no actual
+ * validation is performed. If the given string is more than 16 bits, you'll get a uuid plus
+ * whatever extra there was.
+ */
+export const bufferToUuid = (buf: Buffer): string => {
   return `${bite(buf, 0, 4)}-${bite(buf, 4, 6)}-${bite(buf, 6, 8)}-${bite(buf, 8, 10)}-${bite(
     buf,
     10
   )}`;
 };
 
-const hexToBuffer = (hex: string): Buffer => {
+/**
+ * Converts a hex string with possible dashes to a buffer
+ */
+export const hexToBuffer = (hex: string): Buffer => {
   return Buffer.from(hex.replace(/-/g, ""), "hex");
 };
 
@@ -1295,4 +1307,4 @@ const sortDir: { [k: string]: "ASC" | "DESC" } = {
   "-": "DESC",
 };
 
-const bite = (buf: Buffer, i: number, j?: number): string => buf.slice(i, j).toString("hex");
+export const bite = (buf: Buffer, i: number, j?: number): string => buf.slice(i, j).toString("hex");
