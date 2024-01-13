@@ -317,7 +317,7 @@ describe("AbstractSql Class", () => {
         params: ["abcde"],
       });
       expect(q[1]).toMatchObject({
-        query: "DELETE FROM `users` WHERE (`id` = ?)",
+        query: "DELETE FROM `users` WHERE (`id` = ?) LIMIT 1000",
         params: ["abcde"],
       });
 
@@ -325,12 +325,12 @@ describe("AbstractSql Class", () => {
 
       // NOTE: Currently this _should_ fail validation but it doesn't. Appears to be an error in
       // typescript.
-      //await io.delete("users", { id: "abcde", email: "12345" }, fakeAuth, log);
+      // await io.delete("users", { id: "abcde", email: "12345" }, fakeAuth, log);
     });
 
     test("can delete user with filter", async () => {
       const res1: Array<Test.User> = [];
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 1000; i++) {
         res1.push(user);
       }
       // Select 1
@@ -348,11 +348,11 @@ describe("AbstractSql Class", () => {
       expect(q).toHaveLength(4);
 
       const select = {
-        query: "SELECT `us`.* FROM `users` AS `us` WHERE (`email` LIKE ?) LIMIT 0, 100",
+        query: "SELECT `us`.* FROM `users` AS `us` WHERE (`email` LIKE ?) LIMIT 0, 1000",
         params: ["abcde"],
       };
       const del = {
-        query: "DELETE FROM `users` WHERE (`email` LIKE ?) LIMIT 0, 100",
+        query: "DELETE FROM `users` WHERE (`email` LIKE ?) LIMIT 1000",
         params: ["abcde"],
       };
 

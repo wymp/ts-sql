@@ -18,6 +18,12 @@ export class MockSql implements SimpleSqlDbInterface {
     this.queries.push({ query, params });
     return Promise.resolve({ rows: this.results.shift() || [] });
   }
+  public transaction<T>(
+    queries: (cnx: SimpleSqlDbInterface) => Promise<T>,
+    txName?: string | null | undefined
+  ): Promise<T> {
+    return queries(this);
+  }
   public setNextResult(rows: Array<any>) {
     this.results.push(rows);
   }
