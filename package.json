@@ -4,13 +4,23 @@
   "description": "A small typescript package providing generalized and customizable sql database access",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "directories": {
-    "test": "tests"
-  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
+    "build": "tsc",
+    "check": "pnpm typecheck && pnpm prettier && pnpm test",
+    "clean": "rm -Rf dist || true",
+    "docs:gen": "typedoc src/index.ts --sort visibility --sort static-first --sort alphabetical",
+    "docs:veiw": "pnpx http-server -o docs",
+    "format": "pnpm prettier:fix",
+    "prepack": "pnpm clean && pnpm build",
+    "prepare": "husky install",
+    "prettier": "prettier src tests --check",
+    "prettier:fix": "pnpm prettier --write",
     "test": "jest",
-    "docgen": "npx typedoc src/index.ts --sort visibility --sort static-first --sort alphabetical",
-    "prepublishOnly": "rm -Rf dist; npx tsc && npm run docgen"
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -29,21 +39,29 @@
   "homepage": "https://github.com/wymp/ts-sql#readme",
   "dependencies": {
     "@kael-shipman/uuid-with-v6": "^2.0.0",
-    "@types/node": ">=10.0.0",
-    "@wymp/http-errors": "^1.8.0 || ^2.0.0",
-    "@wymp/ts-simple-interfaces": "^0.5.2 || ^0.6.0",
+    "@wymp/http-errors": "^1.8.0 || ^2.0.0 || ^3.0.0",
+    "@wymp/ts-simple-interfaces": "^0.5.2 || ^0.6.0 || ^0.7.2",
     "@wymp/types": "^0.2.0-rc6"
   },
   "devDependencies": {
-    "@types/jest": "^26.0.23",
-    "@wymp/ts-simple-interfaces-testing": "^0.5.1 || ^0.6.0",
-    "husky": "^6.0.0",
-    "jest": "^26.6.3",
-    "prettier": "^2.3.0",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.18.1",
+    "@typescript-eslint/parser": "^6.18.1",
+    "@wymp/ts-simple-interfaces-testing": "^0.7.2",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-standard-with-typescript": "^43.0.0",
+    "eslint-plugin-import": "^2.25.2",
+    "eslint-plugin-n": "^15.0.0 || ^16.0.0 ",
+    "eslint-plugin-promise": "^6.0.0",
+    "husky": "^8.0.0",
+    "jest": "^29.7.0",
+    "prettier": "^2.8.8",
     "pretty-quick": "^3.1.0",
-    "ts-jest": "^26.5.6",
-    "typedoc": "^0.21.2",
-    "typescript": "^4.2.4"
+    "ts-jest": "^29.1.1",
+    "typedoc": "^0.25.7",
+    "typescript": "^5.3.3"
   },
   "prettier": {
     "printWidth": 100,
@@ -53,12 +71,12 @@
     "verbose": true,
     "testEnvironment": "node",
     "transform": {
-      "^.+\\.tsx?$": "ts-jest"
-    },
-    "globals": {
-      "ts-jest": {
+      "^.+\\.tsx?$": ["ts-jest", {
         "tsconfig": "tsconfig.test.json"
-      }
+      }]
     }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

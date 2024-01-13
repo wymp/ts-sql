@@ -75,7 +75,7 @@ export namespace Test {
         };
         emailLike?: string;
       }>;
-      defaults: typeof Defaults["users"];
+      defaults: (typeof Defaults)["users"];
     };
 
     addresses: {
@@ -85,14 +85,14 @@ export namespace Test {
         country?: string | Array<string>;
         zip?: string | Array<string>;
       }>;
-      defaults: typeof Defaults["addresses"];
+      defaults: (typeof Defaults)["addresses"];
     };
 
     organizations: {
       type: Organization;
       constraints: IdConstraint;
       filters: NullFilter;
-      defaults: typeof Defaults["organizations"];
+      defaults: (typeof Defaults)["organizations"];
     };
 
     "org-roles": {
@@ -102,7 +102,7 @@ export namespace Test {
         organizationId?: string;
         userId?: string;
       }>;
-      defaults: typeof Defaults["org-roles"];
+      defaults: (typeof Defaults)["org-roles"];
     };
 
     pets: {
@@ -113,7 +113,7 @@ export namespace Test {
         type?: Pet["type"];
         nameLike?: string;
       }>;
-      defaults: typeof Defaults["pets"];
+      defaults: (typeof Defaults)["pets"];
     };
   };
 }

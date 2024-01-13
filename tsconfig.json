@@ -17,5 +17,5 @@
     "types": ["node"],
     "noErrorTruncation": true
   },
-  "include": ["src/**/*", "run/**/*"]
+  "include": ["src/**/*"]
 }

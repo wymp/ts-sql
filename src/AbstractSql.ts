@@ -417,7 +417,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     };
 
     if (filter || !_constraint) {
-      log.debug(`Getting ${t} by filter '${JSON.stringify(filter)}'`);
+      log.debug(`Getting ${String(t)} by filter '${JSON.stringify(filter)}'`);
 
       // Apply filter
       if (filter && Object.keys(filter).filter((k) => k !== "_t").length > 0) {
@@ -442,7 +442,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       // Now execute the query and return
       log.debug(`Final query: ${queryStr}; Params: ${JSON.stringify(params)}`);
       const { rows } = await this.db.query<ResourceTypeMap[T]["type"]>(queryStr, params);
-      log.debug(`Returning ${rows.length} ${t}`);
+      log.debug(`Returning ${rows.length} ${String(t)}`);
 
       const data: Array<ResourceTypeMap[T]["type"]> = this.convertBuffersAndHex
         ? rows.map((r) => this.buffersToHex(r))
@@ -464,18 +464,20 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       // Validate
       if (constraint.where.length === 0) {
         throw new E.InternalServerError(
-          `No constraints passed for resource '${t}'. Constraint: ${JSON.stringify(_constraint)}`
+          `No constraints passed for resource '${String(t)}'. Constraint: ${JSON.stringify(
+            _constraint
+          )}`
         );
       }
 
-      log.debug(`Getting ${t} using ${JSON.stringify(constraint)} from database`);
+      log.debug(`Getting ${String(t)} using ${JSON.stringify(constraint)} from database`);
 
       // If there's one or more undefined param, we can't use it
       if (constraint.params.filter((v) => v === undefined).length > 0) {
         log.info(`Constraint is incomplete. Cannot use. ${JSON.stringify(constraint)}`);
         if (thrw) {
           throw new E.NotFound(
-            `No constraint value passed for ${t}, so the resource cannot be found.`
+            `No constraint value passed for ${String(t)}, so the resource cannot be found.`
           );
         } else {
           return Promise.resolve(undefined);
@@ -483,7 +485,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       }
 
       return this.cache.get<ResourceTypeMap[T]["type"]>(
-        `${t}-${JSON.stringify(constraint)}`,
+        `${String(t)}-${JSON.stringify(constraint)}`,
         async () => {
           // Compose query
           query = this.mergeQuery<SelectQuery>(query, <Partial<SelectQuery>>constraint);
@@ -495,7 +497,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
 
           if (rows.length === 0) {
             if (thrw) {
-              throw new E.NotFound(`${t} not found for the given parameters`);
+              throw new E.NotFound(`${String(t)} not found for the given parameters`);
             } else {
               return undefined;
             }
@@ -504,7 +506,9 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
           // Warn if more than one found
           if (rows.length > 1) {
             log.warning(
-              `More than one ${t} found when searching with constraint: Query: ${queryStr}; ` +
+              `More than one ${String(
+                t
+              )} found when searching with constraint: Query: ${queryStr}; ` +
                 `Params: ${JSON.stringify(params)}`
             );
           }
@@ -701,12 +705,12 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
   ): Promise<ResourceTypeMap[T]["type"]> {
     const pk = <keyof ResourceTypeMap[T]["type"]>(this.primaryKeys[t] || "id");
     const pkValStr = Buffer.isBuffer(pkVal) ? this.bufferToUuid(pkVal) : `${pkVal}`;
-    log.info(`Updating ${t}:'${pkValStr}'`);
+    log.info(`Updating ${String(t)}:'${pkValStr}'`);
 
     const currentResource = await this.get(t, { [pk]: pkVal }, log, false);
     if (!currentResource) {
       throw new E.NotFound(
-        `Resource of type '${t}', ${pk} '${pkValStr}', was not found.`,
+        `Resource of type '${String(t)}', ${String(pk)} '${pkValStr}', was not found.`,
         `RESOURCE-NOT-FOUND.${(t as string).toUpperCase()}`
       );
     }
@@ -743,7 +747,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     currentResource?: ResourceTypeMap[T]["type"]
   ): Promise<ResourceTypeMap[T]["type"]> {
     const pk = <keyof ResourceTypeMap[T]["type"]>(this.primaryKeys[t] || "id");
-    log.info(`Saving resource '${t}${_resource[pk] ? `:${_resource[pk]}` : ""}'`);
+    log.info(`Saving resource '${String(t)}${_resource[pk] ? `:${_resource[pk]}` : ""}'`);
 
     if (!currentResource && _resource[pk]) {
       currentResource = await this.get(t, { [pk]: _resource[pk] }, log, false);
@@ -818,7 +822,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
       // prettier-ignore
       const query = "UPDATE `" + table + "` " +
         `SET ${Object.keys(updates).map(k => `\`${k}\` = ?`).join(", ")} ` +
-        "WHERE `" + pk + "` = ?";
+        "WHERE `" + String(pk) + "` = ?";
       const params = [
         ...Object.keys(updates).map((k) => {
           const v = updates[<keyof typeof updates>k]!;
@@ -850,7 +854,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     }
 
     // Bust cache
-    this.cache.clear(new RegExp(`${t}-.*`));
+    this.cache.clear(new RegExp(`${String(t)}-.*`));
 
     // Publish audit message
     const p: Array<Promise<unknown>> = [];
@@ -916,11 +920,12 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
     log: SimpleLoggerInterface
   ): Promise<void> {
     let loop = true;
+    const pgSize = 1000;
 
     // Since we're deleting records, we're _consuming_ pages, not traversing. Therefore,
     // we're always on page 1 until we've deleted all the records.
     const collectionParams: Api.Server.CollectionParams = {
-      __pg: { size: 100 },
+      __pg: { size: pgSize },
     };
 
     // Delete in batches, since we have to publish deletion messages for each
@@ -938,20 +943,20 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
         resources = res.data;
 
         // Loop until we've gotten the last page of resources
-        loop = resources.length >= 100;
+        loop = resources.length >= pgSize;
       }
 
       // Process resource deletion
       if (resources.length === 0) {
         log.info(`Resource(s) not found. Nothing to delete.`);
       } else {
-        log.debug(`Deleting ${resources.length} ${t}`);
+        log.debug(`Deleting ${resources.length} ${String(t)}`);
 
         // Apply filter or constraint
         let query: DeleteQuery = {
           t: "delete",
           from: "`" + (this.tableMap[t]! || this.sanitizeFieldName(t as string)) + "`",
-          limit: "100",
+          limit: String(pgSize),
         };
         if (this.isFilter<T>(filterOrConstraint)) {
           if (Object.keys(filterOrConstraint).filter((k) => k !== "_t").length > 0) {
@@ -972,19 +977,19 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
           // Validate
           if (constraint.where.length === 0) {
             throw new E.InternalServerError(
-              `No constraints passed for deleting resource '${t}'. Constraint: ${JSON.stringify(
-                filterOrConstraint
-              )}`
+              `No constraints passed for deleting resource '${String(
+                t
+              )}'. Constraint: ${JSON.stringify(filterOrConstraint)}`
             );
           }
 
-          log.debug(`Deleting ${t} from database using ${JSON.stringify(constraint)}`);
+          log.debug(`Deleting ${String(t)} from database using ${JSON.stringify(constraint)}`);
 
           // If there's one or more undefined param, we can't use it
           if (constraint.params.filter((v) => v === undefined).length > 0) {
             log.info(`Constraint is incomplete. Cannot use. ${JSON.stringify(constraint)}`);
             throw new E.NotFound(
-              `No constraint value passed for ${t}, so the resource cannot be found.`
+              `No constraint value passed for ${String(t)}, so the resource cannot be found.`
             );
           }
 
@@ -1001,7 +1006,7 @@ export abstract class AbstractSql<ResourceTypeMap extends GenericTypeMap>
         log.debug(`Resource(s) deleted; publishing messages`);
 
         // Bust cache
-        this.cache.clear(new RegExp(`${t}-.*`));
+        this.cache.clear(new RegExp(`${String(t)}-.*`));
 
         // Publish messages
         const p: Array<Promise<unknown>> = [];
