@@ -1,7 +1,7 @@
 import {
-  SimpleSqlDbInterface,
-  SimpleSqlResponseInterface,
-  SqlValue,
+  type SimpleSqlDbInterface,
+  type SimpleSqlResponseInterface,
+  type SqlValue,
 } from "@wymp/ts-simple-interfaces";
 
 export class MockSql implements SimpleSqlDbInterface {
@@ -11,20 +11,23 @@ export class MockSql implements SimpleSqlDbInterface {
     query: string;
     params: null | undefined | Array<SqlValue>;
   }> = [];
-  public query<T>(
+
+  public async query<T>(
     query: string,
     params?: null | Array<SqlValue>
   ): Promise<SimpleSqlResponseInterface<T>> {
     this.queries.push({ query, params });
-    return Promise.resolve({ rows: this.results.shift() || [] });
+    return await Promise.resolve({ rows: this.results.shift() || [] });
   }
-  public transaction<T>(
+
+  public async transaction<T>(
     queries: (cnx: SimpleSqlDbInterface) => Promise<T>,
     txName?: string | null | undefined
   ): Promise<T> {
-    return queries(this);
+    return await queries(this);
   }
-  public setNextResult(rows: Array<any>) {
+
+  public setNextResult(rows: Array<any>): void {
     this.results.push(rows);
   }
 }

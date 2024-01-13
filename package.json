@@ -1,6 +1,6 @@
 {
   "name": "@wymp/sql",
-  "version": "1.0.0-beta20",
+  "version": "1.0.0-beta21",
   "description": "A small typescript package providing generalized and customizable sql database access",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,11 +10,13 @@
   ],
   "scripts": {
     "build": "tsc",
-    "check": "pnpm typecheck && pnpm prettier && pnpm test",
+    "check": "pnpm typecheck && pnpm prettier && pnpm lint && pnpm test",
     "clean": "rm -Rf dist || true",
     "docs:gen": "typedoc src/index.ts --sort visibility --sort static-first --sort alphabetical",
     "docs:veiw": "pnpx http-server -o docs",
-    "format": "pnpm prettier:fix",
+    "format": "pnpm prettier:fix && pnpm lint:fix",
+    "lint": "eslint src/** tests/**",
+    "lint:fix": "pnpm lint --fix",
     "prepack": "pnpm clean && pnpm build",
     "prepare": "husky install",
     "prettier": "prettier src tests --check",
@@ -71,12 +73,12 @@
     "verbose": true,
     "testEnvironment": "node",
     "transform": {
-      "^.+\\.tsx?$": ["ts-jest", {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "globals": {
+      "ts-jest": {
         "tsconfig": "tsconfig.test.json"
-      }]
+      }
     }
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

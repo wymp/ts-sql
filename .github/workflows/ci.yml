@@ -6,11 +6,11 @@ on:
       - v*.x
       - current
       - ci-test/*
-    pull_request:
-      types:
-        - opened
-        - synchronize
-        - reopened
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
   workflow_dispatch:
 
 concurrency:
@@ -39,6 +39,6 @@ jobs:
 
       - name: Lint and Test
         run: |
-          echo "//npm.pkg.github.com/kael-shipman:_authToken=${{ secrets.KS_PKG_TOKEN }}" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.KS_PKG_TOKEN }}" >> ~/.npmrc
           pnpm i
           pnpm check

@@ -1,6 +1,6 @@
 import { exec } from "child_process";
 
-export const validateEnv = () => {
+export const validateEnv = (): void => {
   let errors = false;
   if (!process.env.MYSQL_PWD) {
     console.error(`E: Please set the MYSQL_PWD variable`);
@@ -32,9 +32,7 @@ export type TypeSchema = {
   name: string;
   resource: string;
   extends?: string | null;
-  fields: {
-    [field: string]: AttrField | RelField | IdField;
-  };
+  fields: Record<string, AttrField | RelField | IdField>;
 };
 type DeepType = {
   [key: string]: DeepType | string;
@@ -69,8 +67,8 @@ export type FinalizeFunc = (
   Resources: Array<string>
 ];
 
-export const query = (q: string): Promise<Array<string>> => {
-  return new Promise<Array<string>>((res, rej) => {
+export const query = async (q: string): Promise<Array<string>> => {
+  return await new Promise<Array<string>>((res, rej) => {
     exec(
       `echo '${q}' | mysql -u'${process.env.MYSQL_USER}' -D'${process.env.DATABASE}' | tail -n+2`,
       { env: process.env },
@@ -143,7 +141,7 @@ export const display = (
   _api: Array<TypeSchema>,
   _db: Array<TypeSchema>,
   resources: Array<string>
-) => {
+): void => {
   const r: { attrs: Array<string>; api: Array<string>; db: Array<string> } = {
     attrs: [],
     api: ["export namespace Api {"],
@@ -194,7 +192,7 @@ export const display = (
   console.log(result);
 };
 
-export const generateAndOutputTypes = async (clean: FinalizeFunc) => {
+export const generateAndOutputTypes = async (clean: FinalizeFunc): Promise<void> => {
   const attrs = [];
   const api = [];
   const db = [];
@@ -289,7 +287,7 @@ export const generateAndOutputTypes = async (clean: FinalizeFunc) => {
   display(...clean(attrs, api, db, resources));
 };
 
-export const run = (clean: FinalizeFunc) => {
+export const run = async (clean: FinalizeFunc): Promise<void> => {
   validateEnv();
-  return generateAndOutputTypes(clean).catch(console.error);
+  await generateAndOutputTypes(clean).catch(console.error);
 };

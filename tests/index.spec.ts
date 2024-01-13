@@ -1,7 +1,7 @@
-import * as E from "@wymp/http-errors";
+import type * as E from "@wymp/http-errors";
 import { MockSimpleLogger } from "@wymp/ts-simple-interfaces-testing";
-import { Auth } from "@wymp/types";
-import { AbstractSql, Query } from "../src";
+import { type Auth } from "@wymp/types";
+import { AbstractSql, type Query } from "../src";
 import { MockSql } from "./MockSql";
 import { Test } from "./Types";
 
@@ -24,10 +24,7 @@ class TestIo extends AbstractSql<Test.TypeMap> {
     this.defaults = Test.Defaults;
   }
 
-  public testHexToBuffers<
-    T extends { [k: string]: unknown },
-    Converted extends keyof T | undefined
-  >(
+  public testHexToBuffers<T extends Record<string, unknown>, Converted extends keyof T | undefined>(
     _obj: T
   ): Converted extends undefined ? T : { [K in keyof T]: K extends Converted ? Buffer : T[K] } {
     return this.hexToBuffers<T, Converted>(_obj);
@@ -123,7 +120,7 @@ describe("AbstractSql Class", () => {
 
       // NOTE: Currently this _should_ fail validation but it doesn't. Appears to be an error in
       // typescript.
-      //await io.get("users", { id: "abcde", email: "12345" }, log);
+      // await io.get("users", { id: "abcde", email: "12345" }, log);
     });
 
     test("can get user with filter", async () => {
@@ -256,7 +253,7 @@ describe("AbstractSql Class", () => {
 
       // Uncomment to test typings
 
-      //await io.get("users", { _t: "filter", id: "abcde", email: "12345" }, undefined, log);
+      // await io.get("users", { _t: "filter", id: "abcde", email: "12345" }, undefined, log);
     });
 
     test("can get users with buffer constraint", async () => {
@@ -362,7 +359,7 @@ describe("AbstractSql Class", () => {
       expect(q[3]).toMatchObject(del);
 
       // Uncomment to test typings
-      //await io.delete("users", { _t: "filter", bimchow: "12345" }, fakeAuth, log);
+      // await io.delete("users", { _t: "filter", bimchow: "12345" }, fakeAuth, log);
     });
   });
 
