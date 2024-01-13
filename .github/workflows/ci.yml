@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - v*.x
+      - current
+      - ci-test/*
+    pull_request:
+      types:
+        - opened
+        - synchronize
+        - reopened
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          cache-dependency-path: ./pnpm-lock.yaml
+
+      - run: pnpm i && pnpm check
+        name: Lint and Test
