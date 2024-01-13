@@ -73,12 +73,12 @@
     "verbose": true,
     "testEnvironment": "node",
     "transform": {
-      "^.+\\.tsx?$": "ts-jest"
-    },
-    "globals": {
-      "ts-jest": {
+      "^.+\\.tsx?$": ["ts-jest", {
         "tsconfig": "tsconfig.test.json"
-      }
+      }]
     }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
