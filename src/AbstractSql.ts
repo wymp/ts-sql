@@ -1,12 +1,14 @@
+/* eslint-disable */
+// There are too many funky type tricks going on in this file to meaningfuly enable eslint here
 import { v6 as uuid } from "@kael-shipman/uuid-with-v6";
-import {
+import type {
   SimpleSqlDbInterface,
   SqlValue,
   SqlPrimitive,
   SimpleLoggerInterface,
 } from "@wymp/ts-simple-interfaces";
 import * as E from "@wymp/http-errors";
-import { Api, Auth, Audit, PartialSelect } from "@wymp/types";
+import type { Api, Auth, Audit, PartialSelect } from "@wymp/types";
 
 /** A re-export of the uuid/v6 function from @kael-shipman/uuid-with-v6 */
 export { uuid };

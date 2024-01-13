@@ -1,4 +1,4 @@
-import { IdConstraint, NullFilter, strId, both } from "../src";
+import { type IdConstraint, type NullFilter, strId, both } from "../src";
 
 export namespace Test {
   export type User = {
