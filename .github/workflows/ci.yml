@@ -37,5 +37,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: ./pnpm-lock.yaml
 
-      - run: pnpm i && pnpm check
-        name: Lint and Test
+      - name: Lint and Test
+        run: |
+          echo "//npm.pkg.github.com/kael-shipman:_authToken=${{ secrets.KS_PKG_TOKEN }}" >> ~/.npmrc
+          pnpm i
+          pnpm check
